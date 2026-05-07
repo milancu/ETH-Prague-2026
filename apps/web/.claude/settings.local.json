@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\\\\src\\\\appkit.d.ts\")",
+      "Bash(pnpm typecheck *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\" -Recurse -Force | Where-Object { $_.Extension -eq \".py\" } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" | Where-Object { $_.Name -ne \".venv\" } | ForEach-Object { \"$\\($_.Name\\) \\($\\( if \\($_.PSIsContainer\\) { 'dir' } else { 'file' }\\)\\)\" })"
+    ]
+  }
+}

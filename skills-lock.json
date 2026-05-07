@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "monorepo-management": {
+      "source": "wshobson/agents",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-essentials/skills/monorepo-management/SKILL.md",
+      "computedHash": "4de056e92cfea38bf92ca8217864588e8f32130f57798d2ef72ace27385ea4c7"
+    }
+  }
+}

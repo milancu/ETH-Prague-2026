@@ -1,0 +1,13 @@
+{
+  "name": "@eth-2026/api",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "uv run fastapi dev src/api/main.py --port 8000",
+    "build": "echo 'Python — no build step'",
+    "lint": "uv run ruff check . && uv run mypy src/",
+    "format": "uv run ruff format .",
+    "typecheck": "uv run mypy src/",
+    "test": "uv run pytest"
+  }
+}
