@@ -27,11 +27,11 @@ createAppKit({
   metadata: {
     name: "eth-2026",
     description: "eth-2026 dApp",
-    url: window.location.origin,
+    url: import.meta.env.VITE_APP_URL ?? window.location.origin,
     icons: [],
   },
   features: {
-    analytics: !import.meta.env.DEV,
+    analytics: false,
   },
 })
 
