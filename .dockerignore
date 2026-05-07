@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/.venv
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+apps/api
+.agents
+.claude
+.idea
