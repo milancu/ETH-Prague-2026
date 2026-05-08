@@ -14,7 +14,7 @@ import time
 from collections.abc import Sequence
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -57,6 +57,8 @@ class OrderCreate(_CamelBase):
     verifying_contract: str
     signature: str
     note: str | None = Field(default=None, max_length=512)
+    # Optional so legacy orders posted before market metadata existed still work.
+    market_id: int | None = Field(default=None, ge=0)
 
     @field_validator(
         "maker", "taker", "maker_token", "taker_token", "verifying_contract"
@@ -99,6 +101,7 @@ class OrderRead(_CamelBase):
     verifying_contract: str
     signature: str
     note: str | None
+    market_id: int | None
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -123,8 +126,25 @@ async def create_order(
 @router.get("", response_model=list[OrderRead])
 async def list_orders(
     session: AsyncSession = Depends(get_session),
+    market_id: int | None = Query(default=None, ge=0),
+    maker: str | None = Query(default=None),
 ) -> Sequence[Order]:
-    result = await session.execute(select(Order).order_by("created_at"))
+    if maker is not None:
+        if not _ADDR_RE.match(maker):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail="maker must be a 0x-prefixed 40-hex-char address",
+            )
+        maker = maker.lower()
+
+    stmt = select(Order)
+    if market_id is not None:
+        stmt = stmt.where(Order.market_id == market_id)
+    if maker is not None:
+        stmt = stmt.where(Order.maker == maker)
+    stmt = stmt.order_by("created_at")
+
+    result = await session.execute(stmt)
     return result.scalars().all()
 
 
