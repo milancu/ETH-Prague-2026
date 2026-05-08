@@ -3,12 +3,16 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+from api.lib.logging import setup_logging
 
 load_dotenv()
+setup_logging()
 
 app = FastAPI(title="ETH 2026 API", version="0.0.1")
 
-_cors_origins = os.getenv("CORS_ORIGINS", "https://localhost:5173")
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 _ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",")]
 
 app.add_middleware(
@@ -20,7 +24,11 @@ app.add_middleware(
 )
 
 
-@app.get("/health")
-@app.get("/api/v1/health")
-def health() -> dict[str, str]:
-    return {"status": "ok"}
+class HealthResponse(BaseModel):
+    status: str
+
+
+@app.get("/health", response_model=HealthResponse)
+@app.get("/api/v1/health", response_model=HealthResponse)
+def health() -> HealthResponse:
+    return HealthResponse(status="ok")
