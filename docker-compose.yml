@@ -5,6 +5,13 @@ services:
       dockerfile: Dockerfile
     environment:
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      # SQLite stored on a named volume so it survives container restarts.
+      DATABASE_URL: sqlite+aiosqlite:////app/data/api.db
+      # RPC URLs for tx_hash verification — falls back to public endpoints if unset.
+      RPC_URL_84532: ${RPC_URL_84532:-https://sepolia.base.org}
+      RPC_URL_31337: ${RPC_URL_31337:-http://127.0.0.1:8545}
+    volumes:
+      - api_data:/app/data
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -14,8 +21,22 @@ services:
       context: .
       dockerfile: apps/web/Dockerfile
       args:
+        # Required
         VITE_WALLETCONNECT_PROJECT_ID: ${VITE_WALLETCONNECT_PROJECT_ID:?VITE_WALLETCONNECT_PROJECT_ID is required}
         VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+        # Optional — defaults to Base Sepolia
+        VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_CHAIN_ID: ${VITE_CHAIN_ID:-84532}
+        # Contract addresses — default to deployed Base Sepolia addresses
+        VITE_TABCOIN_ADDRESS: ${VITE_TABCOIN_ADDRESS:-0xe987bdb99fE70af574D4d9eeA5A7700fe29feB16}
+        VITE_PREDICTION_MARKET_ADDRESS: ${VITE_PREDICTION_MARKET_ADDRESS:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+        VITE_CONDITIONAL_TOKENS_ADDRESS: ${VITE_CONDITIONAL_TOKENS_ADDRESS:-0x912c5a72B5a024Ff88987B19632D670185c5A65e}
+        VITE_TABCLOB_ADDRESS: ${VITE_TABCLOB_ADDRESS:-0xC34715695188b3cE1319C9BF7423713fB3C2A470}
+        VITE_POSITION_WRAPPER_FACTORY_ADDRESS: ${VITE_POSITION_WRAPPER_FACTORY_ADDRESS:-0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81}
+        VITE_DEFAULT_ORACLE: ${VITE_DEFAULT_ORACLE:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}
     ports:
       - "3001:80"
     restart: unless-stopped
+
+volumes:
+  api_data:
