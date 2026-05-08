@@ -36,3 +36,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 ipfs-upload.config.json
+
+# auto-generated per-deploy (each dev runs `yarn deploy` themselves)
+/contracts/deployedContracts.ts
