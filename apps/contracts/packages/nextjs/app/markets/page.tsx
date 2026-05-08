@@ -16,8 +16,11 @@ import {
 import { useAccount } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
+import scaffoldConfig from "~~/scaffold.config";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 import { getParsedError, notification } from "~~/utils/scaffold-eth";
+
+const CHAIN_ID = scaffoldConfig.targetNetworks[0].id as keyof typeof deployedContracts;
 
 const OUTCOME_TYPES = ["BINARY", "MULTI", "SCALAR"] as const;
 type OutcomeTypeName = (typeof OUTCOME_TYPES)[number];
@@ -69,10 +72,10 @@ type MarketStruct = {
   paused: boolean;
 };
 
-const PMV2_ADDR = deployedContracts[31337].PredictionMarketV2.address as AddressType;
-const TAB_ADDR = deployedContracts[31337].TABcoin.address as AddressType;
-const CT_ADDR = deployedContracts[31337].ConditionalTokens.address as AddressType;
-const FACTORY_ADDR = deployedContracts[31337].PositionWrapperFactory.address as AddressType;
+const PMV2_ADDR = deployedContracts[CHAIN_ID].PredictionMarketV2.address as AddressType;
+const TAB_ADDR = deployedContracts[CHAIN_ID].TABcoin.address as AddressType;
+const CT_ADDR = deployedContracts[CHAIN_ID].ConditionalTokens.address as AddressType;
+const FACTORY_ADDR = deployedContracts[CHAIN_ID].PositionWrapperFactory.address as AddressType;
 
 const wrapAbi = [
   {
@@ -89,7 +92,7 @@ const readWrapperAddress = async (
   conditionId: `0x${string}`,
   indexSet: bigint,
 ): Promise<AddressType | undefined> => {
-  const factoryAbi = deployedContracts[31337].PositionWrapperFactory.abi;
+  const factoryAbi = deployedContracts[CHAIN_ID].PositionWrapperFactory.abi;
   const client = getPublicClient(wagmiConfig);
   if (!client) return;
   const data = encodeFunctionData({

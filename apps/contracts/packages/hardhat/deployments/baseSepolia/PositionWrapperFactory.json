@@ -1,0 +1,284 @@
+{
+  "address": "0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_wrapperImpl",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "_ct",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "inputs": [],
+      "name": "ERC1167FailedCreateClone",
+      "type": "error"
+    },
+    {
+      "inputs": [],
+      "name": "ZeroAddress",
+      "type": "error"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "collateral",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "bytes32",
+          "name": "conditionId",
+          "type": "bytes32"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "indexSet",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "positionId",
+          "type": "uint256"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "wrapper",
+          "type": "address"
+        }
+      ],
+      "name": "WrapperCreated",
+      "type": "event"
+    },
+    {
+      "inputs": [],
+      "name": "ct",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "collateral",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "conditionId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "indexSet",
+          "type": "uint256"
+        }
+      ],
+      "name": "getOrCreateWrapper",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "w",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "collateral",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "conditionId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "indexSet",
+          "type": "uint256"
+        }
+      ],
+      "name": "getWrapper",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "collateral",
+          "type": "address"
+        },
+        {
+          "internalType": "bytes32",
+          "name": "conditionId",
+          "type": "bytes32"
+        },
+        {
+          "internalType": "uint256",
+          "name": "indexSet",
+          "type": "uint256"
+        }
+      ],
+      "name": "key",
+      "outputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "stateMutability": "pure",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "wrapperImpl",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "bytes32",
+          "name": "",
+          "type": "bytes32"
+        }
+      ],
+      "name": "wrapperOf",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "transactionHash": "0xa0487fb936a05771d1a1c6b98aa887868f41e0cdedc8d8ad97951d082ee0e629",
+  "receipt": {
+    "to": null,
+    "from": "0x4E8472995D3400ee0c717da6365e5255610cec58",
+    "contractAddress": "0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81",
+    "transactionIndex": 6,
+    "gasUsed": "452123",
+    "logsBloom": "0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+    "blockHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+    "transactionHash": "0xa0487fb936a05771d1a1c6b98aa887868f41e0cdedc8d8ad97951d082ee0e629",
+    "logs": [],
+    "blockNumber": 41249933,
+    "cumulativeGasUsed": "1559285",
+    "status": 1,
+    "byzantium": true
+  },
+  "args": [
+    "0x0a031C5b618811bac60aBBbFBaCF4F9c42c33366",
+    "0x912c5a72B5a024Ff88987B19632D670185c5A65e"
+  ],
+  "numDeployments": 1,
+  "solcInputHash": "c7e01c9e93a67b6ce2be90274df0f800",
+  "metadata": "{\"compiler\":{\"version\":\"0.8.30+commit.73712a01\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_wrapperImpl\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_ct\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"ERC1167FailedCreateClone\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ZeroAddress\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"collateral\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"bytes32\",\"name\":\"conditionId\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"indexSet\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"positionId\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"wrapper\",\"type\":\"address\"}],\"name\":\"WrapperCreated\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"ct\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"collateral\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"conditionId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"indexSet\",\"type\":\"uint256\"}],\"name\":\"getOrCreateWrapper\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"w\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"collateral\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"conditionId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"indexSet\",\"type\":\"uint256\"}],\"name\":\"getWrapper\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"collateral\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"conditionId\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"indexSet\",\"type\":\"uint256\"}],\"name\":\"key\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"wrapperImpl\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"wrapperOf\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"}],\"devdoc\":{\"errors\":{\"ERC1167FailedCreateClone()\":[{\"details\":\"A clone instance deployment failed.\"}]},\"kind\":\"dev\",\"methods\":{},\"stateVariables\":{\"wrapperOf\":{\"details\":\"key = keccak256(collateral, conditionId, indexSet) \\u2192 wrapper clone\"}},\"title\":\"PositionWrapperFactory\",\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{\"getOrCreateWrapper(address,bytes32,uint256)\":{\"notice\":\"Vr\\u00e1t\\u00ed existuj\\u00edc\\u00ed wrapper, p\\u0159\\u00edpadn\\u011b ho vytvo\\u0159\\u00ed. Bezpe\\u010dn\\u00e9 volat z UI p\\u0159ed ka\\u017ed\\u00fdm wrap().\"}},\"notice\":\"Vyr\\u00e1b\\u00ed na po\\u017e\\u00e1d\\u00e1n\\u00ed (idempotentn\\u011b) `PositionWrapper` klony pro ka\\u017ed\\u00fd         `(collateralToken, conditionId, indexSet)`. Mapping je deterministick\\u00fd.\",\"version\":1}},\"settings\":{\"compilationTarget\":{\"contracts/PositionWrapperFactory.sol\":\"PositionWrapperFactory\"},\"evmVersion\":\"paris\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\",\"useLiteralContent\":true},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"@openzeppelin/contracts/proxy/Clones.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\n// OpenZeppelin Contracts (last updated v5.0.0) (proxy/Clones.sol)\\n\\npragma solidity ^0.8.20;\\n\\n/**\\n * @dev https://eips.ethereum.org/EIPS/eip-1167[EIP 1167] is a standard for\\n * deploying minimal proxy contracts, also known as \\\"clones\\\".\\n *\\n * > To simply and cheaply clone contract functionality in an immutable way, this standard specifies\\n * > a minimal bytecode implementation that delegates all calls to a known, fixed address.\\n *\\n * The library includes functions to deploy a proxy using either `create` (traditional deployment) or `create2`\\n * (salted deterministic deployment). It also includes functions to predict the addresses of clones deployed using the\\n * deterministic method.\\n */\\nlibrary Clones {\\n    /**\\n     * @dev A clone instance deployment failed.\\n     */\\n    error ERC1167FailedCreateClone();\\n\\n    /**\\n     * @dev Deploys and returns the address of a clone that mimics the behaviour of `implementation`.\\n     *\\n     * This function uses the create opcode, which should never revert.\\n     */\\n    function clone(address implementation) internal returns (address instance) {\\n        /// @solidity memory-safe-assembly\\n        assembly {\\n            // Cleans the upper 96 bits of the `implementation` word, then packs the first 3 bytes\\n            // of the `implementation` address with the bytecode before the address.\\n            mstore(0x00, or(shr(0xe8, shl(0x60, implementation)), 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000))\\n            // Packs the remaining 17 bytes of `implementation` with the bytecode after the address.\\n            mstore(0x20, or(shl(0x78, implementation), 0x5af43d82803e903d91602b57fd5bf3))\\n            instance := create(0, 0x09, 0x37)\\n        }\\n        if (instance == address(0)) {\\n            revert ERC1167FailedCreateClone();\\n        }\\n    }\\n\\n    /**\\n     * @dev Deploys and returns the address of a clone that mimics the behaviour of `implementation`.\\n     *\\n     * This function uses the create2 opcode and a `salt` to deterministically deploy\\n     * the clone. Using the same `implementation` and `salt` multiple time will revert, since\\n     * the clones cannot be deployed twice at the same address.\\n     */\\n    function cloneDeterministic(address implementation, bytes32 salt) internal returns (address instance) {\\n        /// @solidity memory-safe-assembly\\n        assembly {\\n            // Cleans the upper 96 bits of the `implementation` word, then packs the first 3 bytes\\n            // of the `implementation` address with the bytecode before the address.\\n            mstore(0x00, or(shr(0xe8, shl(0x60, implementation)), 0x3d602d80600a3d3981f3363d3d373d3d3d363d73000000))\\n            // Packs the remaining 17 bytes of `implementation` with the bytecode after the address.\\n            mstore(0x20, or(shl(0x78, implementation), 0x5af43d82803e903d91602b57fd5bf3))\\n            instance := create2(0, 0x09, 0x37, salt)\\n        }\\n        if (instance == address(0)) {\\n            revert ERC1167FailedCreateClone();\\n        }\\n    }\\n\\n    /**\\n     * @dev Computes the address of a clone deployed using {Clones-cloneDeterministic}.\\n     */\\n    function predictDeterministicAddress(\\n        address implementation,\\n        bytes32 salt,\\n        address deployer\\n    ) internal pure returns (address predicted) {\\n        /// @solidity memory-safe-assembly\\n        assembly {\\n            let ptr := mload(0x40)\\n            mstore(add(ptr, 0x38), deployer)\\n            mstore(add(ptr, 0x24), 0x5af43d82803e903d91602b57fd5bf3ff)\\n            mstore(add(ptr, 0x14), implementation)\\n            mstore(ptr, 0x3d602d80600a3d3981f3363d3d373d3d3d363d73)\\n            mstore(add(ptr, 0x58), salt)\\n            mstore(add(ptr, 0x78), keccak256(add(ptr, 0x0c), 0x37))\\n            predicted := keccak256(add(ptr, 0x43), 0x55)\\n        }\\n    }\\n\\n    /**\\n     * @dev Computes the address of a clone deployed using {Clones-cloneDeterministic}.\\n     */\\n    function predictDeterministicAddress(\\n        address implementation,\\n        bytes32 salt\\n    ) internal view returns (address predicted) {\\n        return predictDeterministicAddress(implementation, salt, address(this));\\n    }\\n}\\n\",\"keccak256\":\"0xd18408af8a91bedb3d56343eeb9b30eb852e6dea93a5e2d5c6db9ca4cb905155\",\"license\":\"MIT\"},\"contracts/PositionWrapperFactory.sol\":{\"content\":\"// SPDX-License-Identifier: MIT\\npragma solidity ^0.8.24;\\n\\nimport { Clones } from \\\"@openzeppelin/contracts/proxy/Clones.sol\\\";\\n\\ninterface IPositionWrapperInit {\\n    function initialize(\\n        string memory name_,\\n        string memory symbol_,\\n        address ct_,\\n        uint256 positionId_,\\n        bytes32 conditionId_,\\n        uint256 indexSet_,\\n        address collateral_\\n    ) external;\\n}\\n\\ninterface IConditionalTokensIds {\\n    function getCollectionId(bytes32 conditionId, uint256 indexSet) external pure returns (bytes32);\\n    function getPositionId(address collateralToken, bytes32 collectionId) external pure returns (uint256);\\n}\\n\\n/// @title PositionWrapperFactory\\n/// @notice Vyr\\u00e1b\\u00ed na po\\u017e\\u00e1d\\u00e1n\\u00ed (idempotentn\\u011b) `PositionWrapper` klony pro ka\\u017ed\\u00fd\\n///         `(collateralToken, conditionId, indexSet)`. Mapping je deterministick\\u00fd.\\ncontract PositionWrapperFactory {\\n    address public immutable wrapperImpl;\\n    address public immutable ct;\\n\\n    /// @dev key = keccak256(collateral, conditionId, indexSet) \\u2192 wrapper clone\\n    mapping(bytes32 => address) public wrapperOf;\\n\\n    event WrapperCreated(\\n        address indexed collateral,\\n        bytes32 indexed conditionId,\\n        uint256 indexSet,\\n        uint256 positionId,\\n        address wrapper\\n    );\\n\\n    error ZeroAddress();\\n\\n    constructor(address _wrapperImpl, address _ct) {\\n        if (_wrapperImpl == address(0)) revert ZeroAddress();\\n        if (_ct == address(0)) revert ZeroAddress();\\n        wrapperImpl = _wrapperImpl;\\n        ct = _ct;\\n    }\\n\\n    function key(address collateral, bytes32 conditionId, uint256 indexSet) public pure returns (bytes32) {\\n        return keccak256(abi.encode(collateral, conditionId, indexSet));\\n    }\\n\\n    function getWrapper(address collateral, bytes32 conditionId, uint256 indexSet) external view returns (address) {\\n        return wrapperOf[key(collateral, conditionId, indexSet)];\\n    }\\n\\n    /// @notice Vr\\u00e1t\\u00ed existuj\\u00edc\\u00ed wrapper, p\\u0159\\u00edpadn\\u011b ho vytvo\\u0159\\u00ed. Bezpe\\u010dn\\u00e9 volat z UI p\\u0159ed ka\\u017ed\\u00fdm wrap().\\n    function getOrCreateWrapper(\\n        address collateral,\\n        bytes32 conditionId,\\n        uint256 indexSet\\n    ) external returns (address w) {\\n        bytes32 k = key(collateral, conditionId, indexSet);\\n        w = wrapperOf[k];\\n        if (w != address(0)) return w;\\n\\n        bytes32 collectionId = IConditionalTokensIds(ct).getCollectionId(conditionId, indexSet);\\n        uint256 positionId = IConditionalTokensIds(ct).getPositionId(collateral, collectionId);\\n\\n        // Kr\\u00e1tk\\u00fd hex prefix kl\\u00ed\\u010de pro lidsky \\u010diteln\\u00e9 jm\\u00e9no tokenu.\\n        string memory shortKey = _toHexShort(k);\\n        string memory name_ = string(abi.encodePacked(\\\"Wrapped Position \\\", shortKey));\\n        string memory symbol_ = string(abi.encodePacked(\\\"wPOS-\\\", shortKey));\\n\\n        w = Clones.clone(wrapperImpl);\\n        IPositionWrapperInit(w).initialize(name_, symbol_, ct, positionId, conditionId, indexSet, collateral);\\n        wrapperOf[k] = w;\\n\\n        emit WrapperCreated(collateral, conditionId, indexSet, positionId, w);\\n    }\\n\\n    /// @dev Prvn\\u00edch 4 bajty `bytes32` v hex (8 znak\\u016f). Sta\\u010d\\u00ed pro identifikaci wrapperu na \\u00farovni UI.\\n    function _toHexShort(bytes32 v) internal pure returns (string memory) {\\n        bytes memory hexChars = \\\"0123456789abcdef\\\";\\n        bytes memory result = new bytes(8);\\n        for (uint256 i = 0; i < 4; i++) {\\n            uint8 b = uint8(v[i]);\\n            result[i * 2] = hexChars[b >> 4];\\n            result[i * 2 + 1] = hexChars[b & 0x0f];\\n        }\\n        return string(result);\\n    }\\n}\\n\",\"keccak256\":\"0xcecad241f3ba2ed650a4ad575b62cb48dae120237b4371de42815add57b31c4d\",\"license\":\"MIT\"}},\"version\":1}",
+  "bytecode": "0x60c0346100b657601f61080f38819003918201601f19168301916001600160401b038311848410176100bb5780849260409485528339810103126100b657610052602061004b836100d1565b92016100d1565b906001600160a01b038116156100a5576001600160a01b038216156100a55760805260a05260405161072990816100e6823960805181818160de015261042e015260a05181818161012301526102c80152f35b63d92e233d60e01b60005260046000fd5b600080fd5b634e487b7160e01b600052604160045260246000fd5b51906001600160a01b03821682036100b65756fe608080604052600436101561001357600080fd5b60003560e01c90816319e20cf61461016d575080634d7a471c146101525780636ae76d4f1461010d5780637b06ac17146100c8578063a26ccc01146100915763f7a90bf41461006157600080fd5b3461008c57602061007a6100743661019f565b9161027c565b6040516001600160a01b039091168152f35b600080fd5b3461008c576100a86100a23661019f565b91610201565b6000526000602052602060018060a01b0360406000205416604051908152f35b3461008c57600036600319011261008c576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461008c57600036600319011261008c576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461008c5760206101656100a23661019f565b604051908152f35b3461008c57602036600319011261008c57600435600090815260208181526040909120546001600160a01b0316825290f35b606090600319011261008c576004356001600160a01b038116810361008c57906024359060443590565b90601f8019910116810190811067ffffffffffffffff8211176101eb57604052565b634e487b7160e01b600052604160045260246000fd5b9160405191602083019360018060a01b03168452604083015260608201526060815261022e6080826101c9565b51902090565b60005b8381106102475750506000910152565b8181015183820152602001610237565b9060209161027081518092818552858086019101610234565b601f01601f1916010190565b92919261028a848383610201565b6000818152602081905260408120549195916001600160a01b0316806106c457506040516350f3db3f60e11b815260048101859052602481018390527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169690936020856044818b5afa948515610685578395610690575b5060405163039dd75360e41b81526001600160a01b039091166004820181905260248201959095526020816044818b5afa90811561068557839161064f575b5060409182519361035a84866101c9565b601085526f181899199a1a9b1b9c1cb0b131b232b360811b6020860152835161038385826101c9565b600881526020810195601f198601368837825b6004811061058e57505061041c602561040b928751987002bb930b83832b2102837b9b4ba34b7b71607d1b60208b01526103ec60318b84516103db8184840187610234565b81010301601f1981018c528b6101c9565b88519485926477504f532d60d81b602085015251809285850190610234565b81010301601f1981018352826101c9565b6e5af43d82803e903d91602b57fd5bf37f0000000000000000000000000000000000000000000000000000000000000000763d602d80600a3d3981f3363d3d373d3d3d363d7300000062ffffff8260881c1617845260781b176020526037600983f06001600160a01b0381169690871561057f579b873b1561057b5783916104c3916104d589519586948594631d1d4a4d60e01b865260e0600487015260e4860190610257565b84810360031901602486015290610257565b9060448301528760648301528c60848301528a60a48301528b60c48301520381838a5af18015610571579260609694928694927f8ecef7ec1fa182fce6b8d7be17910cd682ae6df5b73818553d62181d0c03e8aa999793610561575b509081528060205220836bffffffffffffffffffffffff60a01b82541617905581519384526020840152820152a3565b8161056b916101c9565b38610531565b85513d84823e3d90fd5b8380fd5b6330be1a3d60e21b8452600484fd5b602081101561063b5784811a6001600160f81b03196105b4600483901c60ff16856106cc565b5116908260011b918383046002148415171561062757861a6105d683876106cc565b536001600160f81b0319906105ee90600f16856106cc565b511660018201809211610613579061060c60019392871a91866106cc565b5301610396565b634e487b7160e01b86526011600452602486fd5b634e487b7160e01b87526011600452602487fd5b634e487b7160e01b84526032600452602484fd5b90506020813d60201161067d575b8161066a602093836101c9565b81010312610679575138610349565b8280fd5b3d915061065d565b6040513d85823e3d90fd5b9094506020813d6020116106bc575b816106ac602093836101c9565b810103126106795751933861030a565b3d915061069f565b955050505050565b9081518110156106dd570160200190565b634e487b7160e01b600052603260045260246000fdfea26469706673582212202241be349d2eaac897c3c684977c3b0854f1747a857683d527b0c01f4883195164736f6c634300081e0033",
+  "deployedBytecode": "0x608080604052600436101561001357600080fd5b60003560e01c90816319e20cf61461016d575080634d7a471c146101525780636ae76d4f1461010d5780637b06ac17146100c8578063a26ccc01146100915763f7a90bf41461006157600080fd5b3461008c57602061007a6100743661019f565b9161027c565b6040516001600160a01b039091168152f35b600080fd5b3461008c576100a86100a23661019f565b91610201565b6000526000602052602060018060a01b0360406000205416604051908152f35b3461008c57600036600319011261008c576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461008c57600036600319011261008c576040517f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03168152602090f35b3461008c5760206101656100a23661019f565b604051908152f35b3461008c57602036600319011261008c57600435600090815260208181526040909120546001600160a01b0316825290f35b606090600319011261008c576004356001600160a01b038116810361008c57906024359060443590565b90601f8019910116810190811067ffffffffffffffff8211176101eb57604052565b634e487b7160e01b600052604160045260246000fd5b9160405191602083019360018060a01b03168452604083015260608201526060815261022e6080826101c9565b51902090565b60005b8381106102475750506000910152565b8181015183820152602001610237565b9060209161027081518092818552858086019101610234565b601f01601f1916010190565b92919261028a848383610201565b6000818152602081905260408120549195916001600160a01b0316806106c457506040516350f3db3f60e11b815260048101859052602481018390527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169690936020856044818b5afa948515610685578395610690575b5060405163039dd75360e41b81526001600160a01b039091166004820181905260248201959095526020816044818b5afa90811561068557839161064f575b5060409182519361035a84866101c9565b601085526f181899199a1a9b1b9c1cb0b131b232b360811b6020860152835161038385826101c9565b600881526020810195601f198601368837825b6004811061058e57505061041c602561040b928751987002bb930b83832b2102837b9b4ba34b7b71607d1b60208b01526103ec60318b84516103db8184840187610234565b81010301601f1981018c528b6101c9565b88519485926477504f532d60d81b602085015251809285850190610234565b81010301601f1981018352826101c9565b6e5af43d82803e903d91602b57fd5bf37f0000000000000000000000000000000000000000000000000000000000000000763d602d80600a3d3981f3363d3d373d3d3d363d7300000062ffffff8260881c1617845260781b176020526037600983f06001600160a01b0381169690871561057f579b873b1561057b5783916104c3916104d589519586948594631d1d4a4d60e01b865260e0600487015260e4860190610257565b84810360031901602486015290610257565b9060448301528760648301528c60848301528a60a48301528b60c48301520381838a5af18015610571579260609694928694927f8ecef7ec1fa182fce6b8d7be17910cd682ae6df5b73818553d62181d0c03e8aa999793610561575b509081528060205220836bffffffffffffffffffffffff60a01b82541617905581519384526020840152820152a3565b8161056b916101c9565b38610531565b85513d84823e3d90fd5b8380fd5b6330be1a3d60e21b8452600484fd5b602081101561063b5784811a6001600160f81b03196105b4600483901c60ff16856106cc565b5116908260011b918383046002148415171561062757861a6105d683876106cc565b536001600160f81b0319906105ee90600f16856106cc565b511660018201809211610613579061060c60019392871a91866106cc565b5301610396565b634e487b7160e01b86526011600452602486fd5b634e487b7160e01b87526011600452602487fd5b634e487b7160e01b84526032600452602484fd5b90506020813d60201161067d575b8161066a602093836101c9565b81010312610679575138610349565b8280fd5b3d915061065d565b6040513d85823e3d90fd5b9094506020813d6020116106bc575b816106ac602093836101c9565b810103126106795751933861030a565b3d915061069f565b955050505050565b9081518110156106dd570160200190565b634e487b7160e01b600052603260045260246000fdfea26469706673582212202241be349d2eaac897c3c684977c3b0854f1747a857683d527b0c01f4883195164736f6c634300081e0033",
+  "devdoc": {
+    "errors": {
+      "ERC1167FailedCreateClone()": [
+        {
+          "details": "A clone instance deployment failed."
+        }
+      ]
+    },
+    "kind": "dev",
+    "methods": {},
+    "stateVariables": {
+      "wrapperOf": {
+        "details": "key = keccak256(collateral, conditionId, indexSet) → wrapper clone"
+      }
+    },
+    "title": "PositionWrapperFactory",
+    "version": 1
+  },
+  "userdoc": {
+    "kind": "user",
+    "methods": {
+      "getOrCreateWrapper(address,bytes32,uint256)": {
+        "notice": "Vrátí existující wrapper, případně ho vytvoří. Bezpečné volat z UI před každým wrap()."
+      }
+    },
+    "notice": "Vyrábí na požádání (idempotentně) `PositionWrapper` klony pro každý         `(collateralToken, conditionId, indexSet)`. Mapping je deterministický.",
+    "version": 1
+  },
+  "storageLayout": {
+    "storage": [
+      {
+        "astId": 4967,
+        "contract": "contracts/PositionWrapperFactory.sol:PositionWrapperFactory",
+        "label": "wrapperOf",
+        "offset": 0,
+        "slot": "0",
+        "type": "t_mapping(t_bytes32,t_address)"
+      }
+    ],
+    "types": {
+      "t_address": {
+        "encoding": "inplace",
+        "label": "address",
+        "numberOfBytes": "20"
+      },
+      "t_bytes32": {
+        "encoding": "inplace",
+        "label": "bytes32",
+        "numberOfBytes": "32"
+      },
+      "t_mapping(t_bytes32,t_address)": {
+        "encoding": "mapping",
+        "key": "t_bytes32",
+        "label": "mapping(bytes32 => address)",
+        "numberOfBytes": "32",
+        "value": "t_address"
+      }
+    }
+  }
+}

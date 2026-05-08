@@ -111,8 +111,14 @@ const config: HardhatUserConfig = {
       accounts: [deployerPrivateKey],
     },
     baseSepolia: {
-      url: "https://sepolia.base.org",
+      // Alchemy is consistent on nonce reads; the public sepolia.base.org RPC
+      // returns stale nonces between sequential deploys ("nonce too low").
+      url: `https://base-sepolia.g.alchemy.com/v2/${providerApiKey}`,
       accounts: [deployerPrivateKey],
+      // Explicit 1 gwei floor: default ethers gas estimation can fall below the
+      // mempool minimum on Base Sepolia and trigger "replacement underpriced"
+      // when a backend has stale state from a prior failed attempt.
+      gasPrice: 1_000_000_000,
     },
     scrollSepolia: {
       url: "https://sepolia-rpc.scroll.io",

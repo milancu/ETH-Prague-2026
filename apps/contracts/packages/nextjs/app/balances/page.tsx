@@ -8,17 +8,20 @@ import { Address as AddressType, formatEther, zeroAddress } from "viem";
 import { useAccount } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import scaffoldConfig from "~~/scaffold.config";
 import { getParsedError } from "~~/utils/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
-const TAB_ADDR = deployedContracts[31337].TABcoin.address as AddressType;
-const CT_ADDR = deployedContracts[31337].ConditionalTokens.address as AddressType;
-const PMV2_ADDR = deployedContracts[31337].PredictionMarketV2.address as AddressType;
-const FACTORY_ADDR = deployedContracts[31337].PositionWrapperFactory.address as AddressType;
+const CHAIN_ID = scaffoldConfig.targetNetworks[0].id as keyof typeof deployedContracts;
 
-const PMV2_ABI = deployedContracts[31337].PredictionMarketV2.abi;
-const CT_ABI = deployedContracts[31337].ConditionalTokens.abi;
-const FACTORY_ABI = deployedContracts[31337].PositionWrapperFactory.abi;
+const TAB_ADDR = deployedContracts[CHAIN_ID].TABcoin.address as AddressType;
+const CT_ADDR = deployedContracts[CHAIN_ID].ConditionalTokens.address as AddressType;
+const PMV2_ADDR = deployedContracts[CHAIN_ID].PredictionMarketV2.address as AddressType;
+const FACTORY_ADDR = deployedContracts[CHAIN_ID].PositionWrapperFactory.address as AddressType;
+
+const PMV2_ABI = deployedContracts[CHAIN_ID].PredictionMarketV2.abi;
+const CT_ABI = deployedContracts[CHAIN_ID].ConditionalTokens.abi;
+const FACTORY_ABI = deployedContracts[CHAIN_ID].PositionWrapperFactory.abi;
 
 const TAB_ABI = [
   {

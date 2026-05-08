@@ -13,9 +13,31 @@ export type ScaffoldConfig = BaseConfig;
 
 export const DEFAULT_ALCHEMY_API_KEY = "cR4WnXePioePZ5fFrnSiR";
 
+const SUPPORTED_CHAINS: Record<number, chains.Chain> = {
+  [chains.hardhat.id]: chains.hardhat,
+  [chains.baseSepolia.id]: chains.baseSepolia,
+};
+
+const DEFAULT_TARGET_CHAIN = chains.baseSepolia;
+
+const resolveTargetChain = (): chains.Chain => {
+  const raw = process.env.NEXT_PUBLIC_CHAIN_ID;
+  if (!raw) return DEFAULT_TARGET_CHAIN;
+  const id = Number(raw);
+  const match = SUPPORTED_CHAINS[id];
+  if (!match) {
+    const supported = Object.keys(SUPPORTED_CHAINS).join(", ");
+    console.warn(
+      `[scaffold.config] Unknown NEXT_PUBLIC_CHAIN_ID="${raw}". Supported: ${supported}. Falling back to ${DEFAULT_TARGET_CHAIN.name} (${DEFAULT_TARGET_CHAIN.id}).`,
+    );
+    return DEFAULT_TARGET_CHAIN;
+  }
+  return match;
+};
+
 const scaffoldConfig = {
   // The networks on which your DApp is live
-  targetNetworks: [chains.hardhat],
+  targetNetworks: [resolveTargetChain()],
   // The interval at which your front-end polls the RPC servers for new data (it has no effect if you only target the local network (default is 4000))
   pollingInterval: 3000,
   // This is ours Alchemy's default API key.
