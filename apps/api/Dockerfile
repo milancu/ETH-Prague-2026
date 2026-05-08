@@ -8,6 +8,8 @@ COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev
 
 COPY src/ ./src/
+COPY alembic/ ./alembic/
+COPY alembic.ini ./
 
 # SQLite database directory — mounted as a named volume in production.
 RUN mkdir -p /app/data
