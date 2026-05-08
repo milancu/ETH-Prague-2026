@@ -72,6 +72,9 @@ class Order(SQLModel, table=True):
     id: str = Field(primary_key=True, max_length=64)
     created_at: datetime = Field(default_factory=_utc_now)
 
+    # Optional: orders posted before market metadata existed have NULL here.
+    market_id: int | None = Field(default=None, index=True)
+
     maker: str = Field(max_length=42)
     taker: str = Field(max_length=42)
     maker_token: str = Field(max_length=42)

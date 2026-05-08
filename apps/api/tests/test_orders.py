@@ -101,3 +101,57 @@ async def test_post_with_truncated_signature_returns_422(
     assert response.status_code == 422
     detail = response.json()["detail"]
     assert any("signature" in str(err.get("loc", [])) for err in detail)
+
+
+async def test_post_round_trips_market_id(client: AsyncClient) -> None:
+    payload = _sample_order_payload()
+    payload["marketId"] = 7
+
+    response = await client.post("/api/v1/orders", json=payload)
+
+    assert response.status_code == 201, response.text
+    assert response.json()["marketId"] == 7
+
+
+async def test_post_without_market_id_defaults_to_null(
+    client: AsyncClient,
+) -> None:
+    response = await client.post("/api/v1/orders", json=_sample_order_payload())
+
+    assert response.status_code == 201, response.text
+    assert response.json()["marketId"] is None
+
+
+async def test_list_filters_by_market_id_and_maker(client: AsyncClient) -> None:
+    other_maker = "0x1111111111111111111111111111111111111111"
+
+    a = _sample_order_payload() | {"marketId": 1}
+    b = _sample_order_payload() | {"marketId": 2}
+    c = _sample_order_payload() | {"marketId": 1, "maker": other_maker}
+
+    for payload in (a, b, c):
+        resp = await client.post("/api/v1/orders", json=payload)
+        assert resp.status_code == 201, resp.text
+
+    by_market = await client.get("/api/v1/orders", params={"market_id": 1})
+    assert by_market.status_code == 200
+    assert {o["marketId"] for o in by_market.json()} == {1}
+    assert len(by_market.json()) == 2
+
+    by_maker = await client.get("/api/v1/orders", params={"maker": other_maker})
+    assert by_maker.status_code == 200
+    makers = {o["maker"] for o in by_maker.json()}
+    assert makers == {other_maker}
+
+    combined = await client.get(
+        "/api/v1/orders", params={"market_id": 1, "maker": other_maker}
+    )
+    assert combined.status_code == 200
+    assert len(combined.json()) == 1
+    assert combined.json()[0]["marketId"] == 1
+    assert combined.json()[0]["maker"] == other_maker
+
+
+async def test_list_with_invalid_maker_returns_422(client: AsyncClient) -> None:
+    response = await client.get("/api/v1/orders", params={"maker": "not-an-address"})
+    assert response.status_code == 422
