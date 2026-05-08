@@ -4,7 +4,6 @@ services:
       context: apps/api
       dockerfile: Dockerfile
     environment:
-      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
     ports:
       - "8000:8000"

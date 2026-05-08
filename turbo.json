@@ -19,6 +19,17 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "chain": {
+      "cache": false,
+      "persistent": true
+    },
+    "compile": {
+      "outputs": ["artifacts/**", "cache/**", "typechain-types/**"]
+    },
+    "deploy": {
+      "dependsOn": ["compile"],
+      "cache": false
     }
   }
 }
