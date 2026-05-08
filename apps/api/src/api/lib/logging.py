@@ -12,7 +12,6 @@ import logging
 import os
 import re
 import sys
-from typing import Any
 
 from pythonjsonlogger.json import JsonFormatter
 
@@ -47,13 +46,12 @@ class RedactingFilter(logging.Filter):
             record.msg = _QUERY_REDACT_RE.sub(r"\1" + _REDACTED, record.msg)
 
         if record.args and isinstance(record.args, tuple):
-            redacted_args: tuple[Any, ...] = tuple(
+            record.args = tuple(
                 _QUERY_REDACT_RE.sub(r"\1" + _REDACTED, a)
                 if isinstance(a, str)
                 else a
                 for a in record.args
             )
-            record.args = redacted_args
 
         return True
 
