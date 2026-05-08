@@ -34,3 +34,8 @@ __pycache__/
 # Misc
 .DS_Store
 *.pem
+
+# Claude Code: per-user file
+.claude/settings.local.json
+# Third-party skill from skills-lock.json (each dev re-installs locally; project-specific skills stay tracked)
+.claude/skills/monorepo-management/

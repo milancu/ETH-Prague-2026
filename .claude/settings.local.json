@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\" -Depth 2 | Where-Object { !$_.FullName.Contains\\(\"node_modules\"\\) -and !$_.FullName.Contains\\(\".git\"\\) } | Select-Object FullName)"
-    ]
-  }
-}
