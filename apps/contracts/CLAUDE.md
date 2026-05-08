@@ -38,7 +38,6 @@ In `packages/hardhat/contracts/`:
 - **`PredictionMarketV2.sol`** — Lifecycle + curation + bond layer over `ConditionalTokens`. Registered as the oracle for every market it creates; per-market `oracle` is the auth. Users call `splitPosition` / `mergePositions` / `redeemPositions` directly on `ConditionalTokens`.
 - **`PositionWrapper.sol`** + **`PositionWrapperFactory.sol`** — `Clones`-based ERC-1155 → ERC-20 wrappers per `(collateral, conditionId, indexSet)`. Idempotent and deterministically mapped.
 - **`TabClob.sol`** — Minimal EIP-712 ERC-20 limit order book. Off-chain signed orders, on-chain atomic fill. Both sides approve TabClob. `SignatureChecker.isValidSignatureNow` covers ECDSA EOAs + EIP-1271 smart wallets.
-- **`YourContract.sol`** — SE-2 boilerplate. Safe to delete once nothing references it.
 
 ## Mandatory rules
 
@@ -62,7 +61,6 @@ In `packages/hardhat/test/`. Mandatory minimum:
 
 Deploy scripts in `packages/hardhat/deploy/` (snake_case filename is the SE-2 convention):
 
-- `00_deploy_your_contract.ts` — SE-2 boilerplate, removable.
 - `01_deploy_tabcoin.ts`
 - `02_deploy_conditional_tokens.ts`
 - `03_deploy_prediction_market_v2.ts`

@@ -3,7 +3,7 @@
 Tento dokument popisuje **každý produkčně použitý kontrakt** v repu, jejich vzájemné vztahy, datové struktury, vstupní/výstupní toky, autentizační model a bezpečnostní úvahy.
 
 > Verze: V2 stack (post-migrace).
-> Solidity: `^0.8.24` (PredictionMarket stack), `>=0.8.0 <0.9.0` (legacy `YourContract`).
+> Solidity: `^0.8.24` (PredictionMarket stack).
 > Závislosti: OpenZeppelin Contracts + OpenZeppelin Contracts-Upgradeable (pro `PositionWrapper`).
 
 ---
@@ -344,20 +344,7 @@ ERC-20 token sloužící jako **kolaterál pro CT**, **bond pro PM2** a obecně 
 
 ---
 
-## 6. `YourContract.sol` _(legacy / scaffold-eth boilerplate)_
-
-> **Není součástí produkčního stacku.** Je to nedotčená šablona z `scaffold-eth`. Drží se v repu jen kvůli `00_deploy_your_contract.ts` (lokální dev seed), ale frontend ji v PM-flow **nepoužívá**.
-
-Stručně:
-- Owner-only `withdraw()`.
-- `setGreeting(string)` payable, počítá počet volání globálně i per-user.
-- `receive()` přijímá ETH.
-
-Pokud chceš, můžeme ho v dalším kroku odstranit (deploy script + .sol).
-
----
-
-## 7. End-to-end flow uživatele (BINARY market)
+## 6. End-to-end flow uživatele (BINARY market)
 
 1. **Deploy chain** (deploy skripty 00–04):
    `TABcoin → ConditionalTokens → PredictionMarketV2(TAB, CT, bond=50 TAB) → PositionWrapper (impl) → PositionWrapperFactory(impl, CT)`.
@@ -389,7 +376,7 @@ Pokud chceš, můžeme ho v dalším kroku odstranit (deploy script + .sol).
 
 ---
 
-## 8. Bezpečnostní úvahy napříč stackem
+## 7. Bezpečnostní úvahy napříč stackem
 
 | Riziko | Mitigace |
 |---|---|
@@ -405,7 +392,7 @@ Pokud chceš, můžeme ho v dalším kroku odstranit (deploy script + .sol).
 
 ---
 
-## 9. Závislosti
+## 8. Závislosti
 
 | Kontrakt | OZ moduly |
 |---|---|
@@ -417,7 +404,7 @@ Pokud chceš, můžeme ho v dalším kroku odstranit (deploy script + .sol).
 
 ---
 
-## 10. Gas — orientační odhady
+## 9. Gas — orientační odhady
 
 > **Disclaimer.** Čísla níže jsou **hrubé odhady** založené na složení operace (SSTORE = ~20k cold / ~5k warm, externí call ~2.6k+ payload, ERC-1155/ERC-20 mint/burn). Reálné hodnoty se liší podle:
 > - délky stringů (`description`, `category`, `name`, `symbol`),
@@ -518,7 +505,7 @@ Pro porovnání:
 
 ---
 
-## 11. Co (zatím) chybí / TODO pro budoucí rozšíření
+## 10. Co (zatím) chybí / TODO pro budoucí rozšíření
 
 - **AMM / orderbook** pro wrapped pozice (off-chain matching nebo on-chain CLOB) — orderbook frontend už scaffolduje.
 - **Dispute window** mezi `resolveMarket` a finálním `reportPayouts` — dnes je oracle final.
