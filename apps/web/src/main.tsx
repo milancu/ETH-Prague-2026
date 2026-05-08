@@ -1,6 +1,7 @@
 import { StrictMode } from "react"
 import ReactDOM from "react-dom/client"
 import { createRouter, RouterProvider } from "@tanstack/react-router"
+import { NuqsAdapter } from "nuqs/adapters/tanstack-router"
 
 import { routeTree } from "./routeTree.gen"
 import { ThemeProvider } from "@/components/theme-provider.tsx"
@@ -27,7 +28,9 @@ if (!rootElement.innerHTML) {
       <WagmiProvider config={config}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
-            <RouterProvider router={router} />
+            <NuqsAdapter>
+              <RouterProvider router={router} />
+            </NuqsAdapter>
           </ThemeProvider>
         </QueryClientProvider>
       </WagmiProvider>

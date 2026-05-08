@@ -9,38 +9,82 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as PositionsRouteImport } from './routes/positions'
+import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as MarketsMarketIdRouteImport } from './routes/markets/$marketId'
 
+const PositionsRoute = PositionsRouteImport.update({
+  id: '/positions',
+  path: '/positions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OrdersRoute = OrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketsMarketIdRoute = MarketsMarketIdRouteImport.update({
+  id: '/markets/$marketId',
+  path: '/markets/$marketId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/orders': typeof OrdersRoute
+  '/positions': typeof PositionsRoute
+  '/markets/$marketId': typeof MarketsMarketIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/orders': typeof OrdersRoute
+  '/positions': typeof PositionsRoute
+  '/markets/$marketId': typeof MarketsMarketIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/orders': typeof OrdersRoute
+  '/positions': typeof PositionsRoute
+  '/markets/$marketId': typeof MarketsMarketIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/orders' | '/positions' | '/markets/$marketId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/orders' | '/positions' | '/markets/$marketId'
+  id: '__root__' | '/' | '/orders' | '/positions' | '/markets/$marketId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  OrdersRoute: typeof OrdersRoute
+  PositionsRoute: typeof PositionsRoute
+  MarketsMarketIdRoute: typeof MarketsMarketIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/positions': {
+      id: '/positions'
+      path: '/positions'
+      fullPath: '/positions'
+      preLoaderRoute: typeof PositionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/orders': {
+      id: '/orders'
+      path: '/orders'
+      fullPath: '/orders'
+      preLoaderRoute: typeof OrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +92,21 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/markets/$marketId': {
+      id: '/markets/$marketId'
+      path: '/markets/$marketId'
+      fullPath: '/markets/$marketId'
+      preLoaderRoute: typeof MarketsMarketIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  OrdersRoute: OrdersRoute,
+  PositionsRoute: PositionsRoute,
+  MarketsMarketIdRoute: MarketsMarketIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

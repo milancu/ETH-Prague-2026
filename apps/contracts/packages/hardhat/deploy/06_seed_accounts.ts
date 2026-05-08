@@ -7,6 +7,9 @@ const AUTHORIZER = "0x48c5632dCC220Abf56000F93B1C4DEB501c64588";
 
 // Accounts seeded with ETH + TAB on the local Hardhat node.
 const FUNDED_ACCOUNTS: { address: string; tab: bigint }[] = [
+  { address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", tab: parseEther("1000") }, // hardhat[0] — deployer / default oracle
+  { address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8", tab: parseEther("100") },  // hardhat[1] — PK: 0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d
+  { address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC", tab: parseEther("100") },  // hardhat[2] — PK: 0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a
   { address: "0x92e30b6A54911a3385Bcd69F2dEc998A13ef692f", tab: parseEther("100") },
   { address: "0x933a8f32D8C2BA04643De7dBcaA38232c4a7847F", tab: parseEther("100") },
   { address: "0x4C8603951Ec9A0c2e737F19595caEcF883ed45Ef", tab: parseEther("50") },

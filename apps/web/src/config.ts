@@ -1,19 +1,17 @@
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi"
 import {
   type AppKitNetwork,
-  arbitrum,
-  base,
-  mainnet,
-  sepolia,
+  baseSepolia,
+  hardhat,
 } from "@reown/appkit/networks"
 import { createAppKit } from "@reown/appkit/react"
 
-export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [
-  mainnet,
-  arbitrum,
-  base,
-  sepolia,
-]
+const CHAIN_ID = parseInt(import.meta.env.VITE_CHAIN_ID ?? "84532")
+
+// Primary network determined by env — localhost for local dev, Base Sepolia for production.
+const primaryNetwork: AppKitNetwork = CHAIN_ID === 31337 ? hardhat : baseSepolia
+
+export const networks: [AppKitNetwork, ...AppKitNetwork[]] = [primaryNetwork, baseSepolia, hardhat]
 
 export const projectId =
   import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? "YOUR_PROJECT_ID"
