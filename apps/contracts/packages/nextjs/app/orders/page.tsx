@@ -8,11 +8,14 @@ import { Address as AddressType, formatEther, maxUint256, parseEther, zeroAddres
 import { useAccount, useChainId, useWalletClient } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import scaffoldConfig from "~~/scaffold.config";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 import { getParsedError, notification } from "~~/utils/scaffold-eth";
 
-const TAB_ADDR = deployedContracts[31337].TABcoin.address as AddressType;
-const TABCLOB_ADDR = deployedContracts[31337].TabClob.address as AddressType;
+const CHAIN_ID = scaffoldConfig.targetNetworks[0].id as keyof typeof deployedContracts;
+
+const TAB_ADDR = deployedContracts[CHAIN_ID].TABcoin.address as AddressType;
+const TABCLOB_ADDR = deployedContracts[CHAIN_ID].TabClob.address as AddressType;
 
 const ORDER_TYPES = {
   Order: [
