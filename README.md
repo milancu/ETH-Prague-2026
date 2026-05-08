@@ -1,21 +1,45 @@
-# shadcn/ui monorepo template
+# PredictAI
 
-This is a Vite monorepo template with shadcn/ui.
+A prediction market dApp for the Czech market with an AI co-pilot. Built at a hackathon. Local Hardhat for development, Base Sepolia for the public demo.
 
-## Adding components
+## What it is
 
-To add components to your app, run the following command at the root of your `web` app:
+A platform where anyone can create, trade, and resolve bets on future events. An AI assistant called Kowalsky helps users find markets, prepare trades, and create new ones in plain language. The AI never signs transactions — every trade is approved and signed by the user.
+
+For details, see [`docs/spec.md`](./docs/spec.md).
+
+## For AI agents
+
+Read [`CLAUDE.md`](./CLAUDE.md) first. Then `docs/constitution.md`, `docs/spec.md`, `docs/plan.md`, `docs/tasks.md`, and the `CLAUDE.md` of the package you are working in.
+
+## For humans
 
 ```bash
-pnpm dlx shadcn@latest add button -c apps/web
+pnpm install
+cp .env.example .env       # fill in keys
+pnpm dev                   # starts web + api
 ```
 
-This will place the ui components in the `packages/ui/src/components` directory.
+Per-package commands live in each app's README.
 
-## Using components
+## Repo layout
 
-To use the components in your app, import them from the `ui` package.
-
-```tsx
-import { Button } from "@workspace/ui/components/button";
 ```
+apps/web         frontend (Vite + React + TS)
+apps/api         backend (FastAPI + Python, uv)
+apps/contracts   Scaffold-ETH 2 monorepo (Hardhat + Solidity, NextJS debug UI)
+packages/shared  shared types, ABIs, address book
+packages/config  shared eslint, tsconfig, prettier
+docs             spec kit (constitution, spec, plan, tasks)
+```
+
+## Stack
+
+Frontend: Vite, React 19, TypeScript, Tailwind, shadcn/ui, wagmi, viem, RainbowKit.
+Backend: Python 3.12, FastAPI, uv, Pydantic v2, web3.py.
+Contracts: Solidity, Hardhat (TypeScript). TABcoin (TAB ERC-20), ConditionalTokens (Gnosis-CTF-compatible ERC-1155), PredictionMarketV2 (lifecycle + bond), PositionWrapper (ERC-1155 → ERC-20), TabClob (EIP-712 limit order book). Local Hardhat network primary, Base Sepolia later.
+AI: LLM via backend proxy with function calling. Web Speech API for voice input.
+
+## License
+
+TBD.
