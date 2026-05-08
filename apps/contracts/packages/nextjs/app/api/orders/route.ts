@@ -3,11 +3,11 @@ import { promises as fs } from "fs";
 import path from "path";
 
 // Persist TabClob signed limit orders to packages/nextjs/data/orders.csv.
-// Layout: id,createdAt,maker,taker,makerToken,takerToken,makerAmount,takerAmount,expiry,salt,chainId,verifyingContract,signature,note
+// Layout: id,createdAt,maker,taker,makerToken,takerToken,makerAmount,takerAmount,expiry,salt,marketId,chainId,verifyingContract,signature,note
 
 const CSV_PATH = path.join(process.cwd(), "data", "orders.csv");
 const HEADER =
-  "id,createdAt,maker,taker,makerToken,takerToken,makerAmount,takerAmount,expiry,salt,chainId,verifyingContract,signature,note";
+  "id,createdAt,maker,taker,makerToken,takerToken,makerAmount,takerAmount,expiry,salt,marketId,chainId,verifyingContract,signature,note";
 
 const columnOrder = HEADER.split(",");
 

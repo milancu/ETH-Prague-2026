@@ -14,29 +14,40 @@ import { IERC165 } from "@openzeppelin/contracts/utils/introspection/IERC165.sol
 contract PositionWrapper is Initializable, ERC20Upgradeable, IERC1155Receiver {
     address public ct;
     uint256 public positionId;
+    bytes32 public conditionId;
+    uint256 public indexSet;
+    address public collateral;
+
+    error ZeroAmount();
 
     function initialize(
         string memory name_,
         string memory symbol_,
         address ct_,
-        uint256 positionId_
+        uint256 positionId_,
+        bytes32 conditionId_,
+        uint256 indexSet_,
+        address collateral_
     ) external initializer {
         __ERC20_init(name_, symbol_);
         ct = ct_;
         positionId = positionId_;
+        conditionId = conditionId_;
+        indexSet = indexSet_;
+        collateral = collateral_;
     }
 
     /// @notice Uživatel obalí `amount` ERC-1155 pozic na ERC-20 wrapped tokeny.
     ///         Předtím musí volat `ct.setApprovalForAll(thisWrapper, true)`.
     function wrap(uint256 amount) external {
-        require(amount > 0, "zero amount");
+        if (amount == 0) revert ZeroAmount();
         IERC1155(ct).safeTransferFrom(msg.sender, address(this), positionId, amount, "");
         _mint(msg.sender, amount);
     }
 
     /// @notice Spálí `amount` wrapped ERC-20 a vrátí stejné množství ERC-1155 pozice.
     function unwrap(uint256 amount) external {
-        require(amount > 0, "zero amount");
+        if (amount == 0) revert ZeroAmount();
         _burn(msg.sender, amount);
         IERC1155(ct).safeTransferFrom(address(this), msg.sender, positionId, amount, "");
     }

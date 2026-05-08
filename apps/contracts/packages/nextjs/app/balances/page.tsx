@@ -8,6 +8,7 @@ import { Address as AddressType, formatEther, zeroAddress } from "viem";
 import { useAccount } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
+import { getParsedError } from "~~/utils/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
 
 const TAB_ADDR = deployedContracts[31337].TABcoin.address as AddressType;
@@ -59,7 +60,7 @@ const FUNDED_ACCOUNTS: { label: string; addr: AddressType }[] = [
   { label: "0x48c5… (TAB authorizer)", addr: "0x48c5632dCC220Abf56000F93B1C4DEB501c64588" },
 ];
 
-const OUTCOME_TYPES = ["BINARY", "MULTI", "SCALAR", "ORDINAL"] as const;
+const OUTCOME_TYPES = ["BINARY", "MULTI", "SCALAR"] as const;
 
 type SlotInfo = {
   slot: number;
@@ -73,9 +74,11 @@ type SlotInfo = {
 
 type MarketInfo = {
   id: number;
+  name: string;
   description: string;
   category: string;
   outcomeType: number;
+  outcomeLabels: string[];
   resolved: boolean;
   canceled: boolean;
   conditionId: `0x${string}`;
@@ -161,10 +164,12 @@ const BalancesPage: NextPage = () => {
             args: [BigInt(i)],
             chainId: 31337,
           })) as {
+            name: string;
             description: string;
             category: string;
             outcomeType: number;
             outcomeSlotCount: bigint;
+            outcomeLabels: string[];
             conditionId: `0x${string}`;
             resolved: boolean;
             canceled: boolean;
@@ -176,9 +181,11 @@ const BalancesPage: NextPage = () => {
 
           markets.push({
             id: i,
+            name: m.name,
             description: m.description,
             category: m.category,
             outcomeType: m.outcomeType,
+            outcomeLabels: [...m.outcomeLabels],
             resolved: m.resolved,
             canceled: m.canceled,
             conditionId: m.conditionId,
@@ -217,7 +224,7 @@ const BalancesPage: NextPage = () => {
         if (canceled) return;
         setSnap({ eth: ethBal.value, tab: tabBal, markets, wrappers });
       } catch (e: unknown) {
-        if (!canceled) setErr(e instanceof Error ? e.message : String(e));
+        if (!canceled) setErr(getParsedError(e));
       } finally {
         if (!canceled) setLoading(false);
       }
@@ -383,7 +390,8 @@ const MarketsSection = ({ markets }: { markets: MarketInfo[] }) => {
                   </span>
                   <span className="badge badge-ghost">{OUTCOME_TYPES[m.outcomeType]}</span>
                 </div>
-                <div className="font-medium">{m.description}</div>
+                <div className="font-medium">{m.name || m.description}</div>
+                {m.description && m.name && <div className="text-xs opacity-70">{m.description}</div>}
                 <div className="text-xs opacity-60 mb-2">category: {m.category}</div>
                 <table className="table table-xs">
                   <thead>
@@ -397,7 +405,9 @@ const MarketsSection = ({ markets }: { markets: MarketInfo[] }) => {
                   <tbody>
                     {m.slots.map(s => (
                       <tr key={s.slot}>
-                        <td>{s.slot}</td>
+                        <td>
+                          {s.slot}: {m.outcomeLabels[s.slot] ?? "—"}
+                        </td>
                         <td className="font-mono">{formatEther(s.raw1155)}</td>
                         <td>
                           {s.wrapperAddr !== zeroAddress ? (

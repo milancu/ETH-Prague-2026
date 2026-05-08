@@ -35,16 +35,20 @@ contract TABcoin is ERC20, ERC20Burnable {
     event Claimed(address indexed user, uint256 amount);
     event Minted(address indexed to, uint256 amount);
 
+    error NotAuthorizer(address expected, address actual);
+    error ZeroAddress();
+    error ClaimNotAuthorized();
+
     constructor() ERC20("TABcoin", "TAB") {}
 
     modifier onlyAuthorizer() {
-        require(msg.sender == AUTHORIZER, "Not authorizer");
+        if (msg.sender != AUTHORIZER) revert NotAuthorizer(AUTHORIZER, msg.sender);
         _;
     }
 
     /// @notice Authorizer přidá JEDNO povolení claimu dané adrese (může volat opakovaně)
     function authorizeClaim(address user) external onlyAuthorizer {
-        require(user != address(0), "Zero address");
+        if (user == address(0)) revert ZeroAddress();
         unchecked {
             _claimAllowance[user] += 1;
         }
@@ -65,7 +69,7 @@ contract TABcoin is ERC20, ERC20Burnable {
     /// @notice Uživatel provede claim (pokud má k dispozici alespoň jedno povolení)
     function claim() external {
         uint256 allowanceLeft = _claimAllowance[msg.sender];
-        require(allowanceLeft > 0, "Not authorized");
+        if (allowanceLeft == 0) revert ClaimNotAuthorized();
 
         // odebereme jedno „povolení“ a mintneme CLAIM_AMOUNT
         _claimAllowance[msg.sender] = allowanceLeft - 1;
