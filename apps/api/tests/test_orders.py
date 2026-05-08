@@ -1,4 +1,4 @@
-"""Smoke tests for `/api/v1/orders`."""
+"""Smoke tests for `/orders`."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ async def test_post_creates_order_with_server_generated_id_and_created_at(
 ) -> None:
     payload = _sample_order_payload()
 
-    response = await client.post("/api/v1/orders", json=payload)
+    response = await client.post("/orders", json=payload)
 
     assert response.status_code == 201, response.text
     body = response.json()
@@ -67,26 +67,26 @@ async def test_post_creates_order_with_server_generated_id_and_created_at(
 
 
 async def test_post_then_get_then_delete_round_trip(client: AsyncClient) -> None:
-    post_resp = await client.post("/api/v1/orders", json=_sample_order_payload())
+    post_resp = await client.post("/orders", json=_sample_order_payload())
     assert post_resp.status_code == 201
     order_id = post_resp.json()["id"]
 
-    list_resp = await client.get("/api/v1/orders")
+    list_resp = await client.get("/orders")
     assert list_resp.status_code == 200
     assert any(o["id"] == order_id for o in list_resp.json())
 
-    one_resp = await client.get(f"/api/v1/orders/{order_id}")
+    one_resp = await client.get(f"/orders/{order_id}")
     assert one_resp.status_code == 200
     assert one_resp.json()["id"] == order_id
 
-    del_resp = await client.delete(f"/api/v1/orders/{order_id}")
+    del_resp = await client.delete(f"/orders/{order_id}")
     assert del_resp.status_code == 204
 
-    after_resp = await client.get("/api/v1/orders")
+    after_resp = await client.get("/orders")
     assert after_resp.status_code == 200
     assert all(o["id"] != order_id for o in after_resp.json())
 
-    miss_resp = await client.get(f"/api/v1/orders/{order_id}")
+    miss_resp = await client.get(f"/orders/{order_id}")
     assert miss_resp.status_code == 404
 
 
@@ -96,7 +96,7 @@ async def test_post_with_truncated_signature_returns_422(
     payload = _sample_order_payload()
     payload["signature"] = "0xdeadbeef"  # too short
 
-    response = await client.post("/api/v1/orders", json=payload)
+    response = await client.post("/orders", json=payload)
 
     assert response.status_code == 422
     detail = response.json()["detail"]

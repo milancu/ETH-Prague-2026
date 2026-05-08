@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from api.routes import orders
+from api.routes import markets, orders
 
 load_dotenv()
 
@@ -21,10 +21,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(orders.router, prefix="/api/v1")
+app.include_router(markets.router)
+app.include_router(orders.router)
 
 
 @app.get("/health")
-@app.get("/api/v1/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}

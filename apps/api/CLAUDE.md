@@ -29,7 +29,7 @@ apps/api/
 
 ## Conventions
 
-- One router per concern. Mount under `/api/v1/...`.
+- One router per concern. Mount at root (e.g. `/markets`, `/orders`). No `/api/v1` prefix — the FE consumes paths as the spec writes them.
 - Every route declares `response_model=` and a Pydantic body model. No raw dicts in or out.
 - Errors: raise `HTTPException` or a custom domain exception caught by an app-wide handler. Never silently swallow.
 - Async by default. Sync only for CPU-bound work, run in a thread pool.

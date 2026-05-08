@@ -1,4 +1,4 @@
-"""CLOB order mempool endpoints (`/api/v1/orders`).
+"""CLOB order mempool endpoints (`/orders`).
 
 Off-chain signed `TabClob` orders live here between maker post and taker fill.
 Wire shape mirrors the SE-2 scaffold's CSV order book at
