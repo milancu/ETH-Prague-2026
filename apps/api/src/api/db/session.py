@@ -16,16 +16,22 @@ from sqlalchemy.ext.asyncio import (
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.pool import StaticPool
 
 DEFAULT_DATABASE_URL = "sqlite+aiosqlite:///./api.db"
 
 
 def _make_engine() -> AsyncEngine:
     url = os.getenv("DATABASE_URL", DEFAULT_DATABASE_URL)
-    connect_args: dict[str, object] = {}
+    kwargs: dict[str, object] = {"future": True}
     if url.startswith("sqlite"):
-        connect_args["check_same_thread"] = False
-    return create_async_engine(url, connect_args=connect_args, future=True)
+        kwargs["connect_args"] = {"check_same_thread": False}
+        # `:memory:` SQLite gives every connection its own database, so multiple
+        # sessions see different state. StaticPool reuses one connection across
+        # the engine, which is what tests need.
+        if ":memory:" in url:
+            kwargs["poolclass"] = StaticPool
+    return create_async_engine(url, **kwargs)
 
 
 engine: AsyncEngine = _make_engine()

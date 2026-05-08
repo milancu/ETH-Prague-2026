@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from api.routes import orders
+
 load_dotenv()
 
 app = FastAPI(title="ETH 2026 API", version="0.0.1")
@@ -18,6 +20,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(orders.router, prefix="/api/v1")
 
 
 @app.get("/health")

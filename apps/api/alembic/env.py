@@ -8,8 +8,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 from sqlmodel import SQLModel
 
-# `import api.db.models` once any model module exists, so SQLModel.metadata
-# is populated for autogenerate. Nothing to import yet — schema is empty.
+from api.db import models  # noqa: F401  (registers tables on SQLModel.metadata)
 
 config = context.config
 
