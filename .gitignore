@@ -31,6 +31,12 @@ __pycache__/
 *.pyo
 .venv/
 
+# Local SQLite databases (per-dev state)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
 # Misc
 .DS_Store
 *.pem
