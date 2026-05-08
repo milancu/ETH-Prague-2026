@@ -12,9 +12,13 @@ const deploy_prediction_market: DeployFunction = async function (hre: HardhatRun
   const tab = await get("TABcoin");
   const ct = await get("ConditionalTokens");
 
-  const curator = process.env.CURATOR ?? deployer;
-  const governance = process.env.GOVERNANCE ?? deployer;
-  const treasury = process.env.TREASURY ?? deployer;
+  // On local networks the deployer must own these roles, otherwise post-deploy
+  // wiring (e.g. setWrapperFactory) reverts with NotGovernance. Live networks
+  // honor the env vars so we can pin operator wallets.
+  const isLocal = hre.network.name === "hardhat" || hre.network.name === "localhost";
+  const curator = isLocal ? deployer : (process.env.CURATOR ?? deployer);
+  const governance = isLocal ? deployer : (process.env.GOVERNANCE ?? deployer);
+  const treasury = isLocal ? deployer : (process.env.TREASURY ?? deployer);
 
   await deploy("PredictionMarketV2", {
     from: deployer,

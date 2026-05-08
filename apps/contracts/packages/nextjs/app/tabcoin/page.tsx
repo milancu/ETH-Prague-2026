@@ -29,13 +29,13 @@ const TabcoinPage: NextPage = () => {
     functionName: "CLAIM_AMOUNT",
   });
 
-  const isAuthorizer =
-    !!connected && !!authorizer && connected.toLowerCase() === (authorizer as AddressType).toLowerCase();
-
   return (
     <div className="container mx-auto p-6 max-w-3xl">
       <h1 className="text-3xl font-bold mb-2">TABcoin</h1>
-      <p className="text-sm opacity-70 mb-6">ERC-20 kolaterál a bond token pro PredictionMarketV2.</p>
+      <p className="text-sm opacity-70 mb-6">
+        ERC-20 kolaterál a bond token pro PredictionMarketV2. <strong>Mock režim:</strong> mint / authorize /
+        revoke jsou veřejné — kdokoliv si může natáhnout TAB na svůj účet bez omezení.
+      </p>
 
       <div className="card bg-base-100 shadow-xl mb-6">
         <div className="card-body">
@@ -56,17 +56,7 @@ const TabcoinPage: NextPage = () => {
         </div>
       </div>
 
-      {isAuthorizer ? (
-        <AuthorizerPanel />
-      ) : (
-        <div className="alert alert-info">
-          <span>
-            Authorizer (mint / authorize / revoke) může volat pouze adresa{" "}
-            <code className="text-xs">{authorizer ? (authorizer as string) : "…"}</code>. Připoj se touto wallet pro
-            přístup k admin panelu.
-          </span>
-        </div>
-      )}
+      <MintPanel connected={connected} authorizer={authorizer as AddressType | undefined} />
     </div>
   );
 };
@@ -95,19 +85,20 @@ const ClaimButton = ({ enabled }: { enabled: boolean }) => {
   );
 };
 
-const AuthorizerPanel = () => {
+const MintPanel = ({ connected, authorizer }: { connected?: AddressType; authorizer?: AddressType }) => {
   const [target, setTarget] = useState("");
   const [mintAmount, setMintAmount] = useState("");
 
   const { writeContractAsync, isPending } = useScaffoldWriteContract({ contractName: "TABcoin" });
 
-  const valid = /^0x[0-9a-fA-F]{40}$/.test(target);
+  const effectiveTarget = (target || connected || "") as string;
+  const valid = /^0x[0-9a-fA-F]{40}$/.test(effectiveTarget);
 
   const onAuthorize = async () => {
     if (!valid) return notification.error("Zadej platnou adresu");
     try {
-      await writeContractAsync({ functionName: "authorizeClaim", args: [target as AddressType] });
-      notification.success(`Authorized ${target}`);
+      await writeContractAsync({ functionName: "authorizeClaim", args: [effectiveTarget as AddressType] });
+      notification.success(`Authorized ${effectiveTarget}`);
     } catch (e: unknown) {
       notification.error(e instanceof Error ? e.message : String(e));
     }
@@ -116,8 +107,8 @@ const AuthorizerPanel = () => {
   const onRevoke = async () => {
     if (!valid) return notification.error("Zadej platnou adresu");
     try {
-      await writeContractAsync({ functionName: "revokeClaim", args: [target as AddressType] });
-      notification.success(`Revoked ${target}`);
+      await writeContractAsync({ functionName: "revokeClaim", args: [effectiveTarget as AddressType] });
+      notification.success(`Revoked ${effectiveTarget}`);
     } catch (e: unknown) {
       notification.error(e instanceof Error ? e.message : String(e));
     }
@@ -129,9 +120,9 @@ const AuthorizerPanel = () => {
     try {
       await writeContractAsync({
         functionName: "mint",
-        args: [target as AddressType, parseEther(mintAmount)],
+        args: [effectiveTarget as AddressType, parseEther(mintAmount)],
       });
-      notification.success(`Minted ${mintAmount} TAB → ${target}`);
+      notification.success(`Minted ${mintAmount} TAB → ${effectiveTarget}`);
     } catch (e: unknown) {
       notification.error(e instanceof Error ? e.message : String(e));
     }
@@ -140,9 +131,17 @@ const AuthorizerPanel = () => {
   return (
     <div className="card bg-base-100 shadow-xl border-2 border-warning">
       <div className="card-body">
-        <h2 className="card-title">🔐 Authorizer panel</h2>
-        <label className="label">Cílová adresa</label>
-        <AddressInput value={target} onChange={setTarget} placeholder="0x…" />
+        <h2 className="card-title">🪙 Mint panel (mock — open to all)</h2>
+        <p className="text-xs opacity-70">
+          MOCK token. Mint funkce je veřejná — kdokoliv může natáhnout libovolný TAB na libovolnou adresu.
+          Historický `AUTHORIZER` (<code className="text-[10px]">{authorizer ?? "…"}</code>) je už jen
+          informativní konstanta a nemá privilegia.
+        </p>
+
+        <label className="label">
+          Cílová adresa <span className="opacity-60">(prázdné = připojená wallet)</span>
+        </label>
+        <AddressInput value={target} onChange={setTarget} placeholder={connected ?? "0x…"} />
 
         <div className="flex flex-wrap gap-2 mt-3">
           <button className="btn btn-outline btn-sm" disabled={isPending || !valid} onClick={onAuthorize}>

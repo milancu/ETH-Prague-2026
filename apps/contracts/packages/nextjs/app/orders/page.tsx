@@ -9,7 +9,7 @@ import { useAccount, useChainId, useWalletClient } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldEventHistory } from "~~/hooks/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
-import { notification } from "~~/utils/scaffold-eth";
+import { getParsedError, notification } from "~~/utils/scaffold-eth";
 
 const TAB_ADDR = deployedContracts[31337].TABcoin.address as AddressType;
 const TABCLOB_ADDR = deployedContracts[31337].TabClob.address as AddressType;
@@ -24,8 +24,21 @@ const ORDER_TYPES = {
     { name: "takerAmount", type: "uint128" },
     { name: "expiry", type: "uint64" },
     { name: "salt", type: "uint256" },
+    { name: "marketId", type: "uint256" },
   ],
 } as const;
+
+const ORDER_TUPLE_COMPONENTS = [
+  { name: "maker", type: "address" },
+  { name: "taker", type: "address" },
+  { name: "makerToken", type: "address" },
+  { name: "takerToken", type: "address" },
+  { name: "makerAmount", type: "uint128" },
+  { name: "takerAmount", type: "uint128" },
+  { name: "expiry", type: "uint64" },
+  { name: "salt", type: "uint256" },
+  { name: "marketId", type: "uint256" },
+] as const;
 
 const ERC20_ABI = [
   {
@@ -56,20 +69,8 @@ const TABCLOB_FILL_ABI = [
     type: "function",
     stateMutability: "nonpayable",
     inputs: [
-      {
-        name: "o",
-        type: "tuple",
-        components: [
-          { name: "maker", type: "address" },
-          { name: "taker", type: "address" },
-          { name: "makerToken", type: "address" },
-          { name: "takerToken", type: "address" },
-          { name: "makerAmount", type: "uint128" },
-          { name: "takerAmount", type: "uint128" },
-          { name: "expiry", type: "uint64" },
-          { name: "salt", type: "uint256" },
-        ],
-      },
+      { name: "o", type: "tuple", components: ORDER_TUPLE_COMPONENTS },
+      { name: "fillMakerAmount", type: "uint128" },
       { name: "signature", type: "bytes" },
     ],
     outputs: [],
@@ -78,22 +79,7 @@ const TABCLOB_FILL_ABI = [
     name: "cancel",
     type: "function",
     stateMutability: "nonpayable",
-    inputs: [
-      {
-        name: "o",
-        type: "tuple",
-        components: [
-          { name: "maker", type: "address" },
-          { name: "taker", type: "address" },
-          { name: "makerToken", type: "address" },
-          { name: "takerToken", type: "address" },
-          { name: "makerAmount", type: "uint128" },
-          { name: "takerAmount", type: "uint128" },
-          { name: "expiry", type: "uint64" },
-          { name: "salt", type: "uint256" },
-        ],
-      },
-    ],
+    inputs: [{ name: "o", type: "tuple", components: ORDER_TUPLE_COMPONENTS }],
     outputs: [],
   },
 ] as const;
@@ -187,6 +173,7 @@ const SignOrderForm = ({
   const [makerTokenAddr, setMakerTokenAddr] = useState<AddressType | "">("");
   const [makerAmount, setMakerAmount] = useState("");
   const [takerAmount, setTakerAmount] = useState("");
+  const [marketId, setMarketId] = useState("");
   const [taker, setTaker] = useState<AddressType>(zeroAddress);
   const [expiryHours, setExpiryHours] = useState(24);
   const [note, setNote] = useState("");
@@ -199,7 +186,7 @@ const SignOrderForm = ({
       await ensureErc20Approval(makerTokenAddr, connected, TABCLOB_ADDR, maxUint256);
       notification.success("Maker token schválen pro TabClob");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     } finally {
       setBusy(false);
     }
@@ -209,6 +196,7 @@ const SignOrderForm = ({
     if (!walletClient || !connected) return notification.error("Připoj wallet");
     if (!makerTokenAddr) return notification.error("Zvol wrapped pozici");
     if (!makerAmount || !takerAmount) return notification.error("Zadej amounty");
+    if (!marketId.trim()) return notification.error("Zadej marketId (TabClob ho ověří proti wrapperům)");
 
     const signingAccount = (walletClient as unknown as { account?: { address: AddressType } }).account?.address;
     if (!signingAccount) return notification.error("Wallet account není dostupný");
@@ -229,6 +217,7 @@ const SignOrderForm = ({
         takerAmount: parseEther(takerAmount),
         expiry,
         salt,
+        marketId: BigInt(marketId),
       };
       const domain = {
         name: "TabClob",
@@ -263,6 +252,7 @@ const SignOrderForm = ({
         takerAmount: order.takerAmount.toString(),
         expiry: order.expiry.toString(),
         salt: order.salt.toString(),
+        marketId: order.marketId.toString(),
         chainId: String(chainId),
         verifyingContract: TABCLOB_ADDR,
         signature,
@@ -277,9 +267,10 @@ const SignOrderForm = ({
       notification.success("Order signed & saved");
       setMakerAmount("");
       setTakerAmount("");
+      setMarketId("");
       setNote("");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     } finally {
       setBusy(false);
     }
@@ -332,6 +323,17 @@ const SignOrderForm = ({
                 ? `${(Number(takerAmount) / Number(makerAmount)).toFixed(4)} TAB / wPos`
                 : "—"}
             </div>
+          </div>
+          <div>
+            <label className="label">Market ID (TabClob ověří, že wPos patří tomuto marketu)</label>
+            <input
+              className="input input-bordered w-full"
+              type="number"
+              min={0}
+              value={marketId}
+              onChange={e => setMarketId(e.target.value)}
+              placeholder="0"
+            />
           </div>
           <div>
             <label className="label">Specific taker (0x0 = anyone)</label>
@@ -419,7 +421,30 @@ const OrdersTable = ({ connected }: { connected?: AddressType }) => {
     takerAmount: BigInt(o.takerAmount),
     expiry: BigInt(o.expiry),
     salt: BigInt(o.salt),
+    marketId: BigInt(o.marketId ?? "0"),
   });
+
+  const promptFillAmount = (full: bigint): bigint | null => {
+    const input = window.prompt(
+      `Kolik makerToken-u chceš odebrat? (max ${formatEther(full)})\n` +
+        `Nech prázdné nebo 0 pro full fill.`,
+      formatEther(full),
+    );
+    if (input === null) return null; // user cancelled
+    const trimmed = input.trim();
+    if (!trimmed || trimmed === "0") return full;
+    try {
+      const parsed = parseEther(trimmed);
+      if (parsed <= 0n || parsed > full) {
+        notification.error(`Hodnota mimo rozsah (1..${formatEther(full)})`);
+        return null;
+      }
+      return parsed;
+    } catch {
+      notification.error("Nepovolený formát čísla");
+      return null;
+    }
+  };
 
   const onFill = async (o: CsvOrder) => {
     if (!connected) return notification.error("Připoj wallet");
@@ -429,22 +454,32 @@ const OrdersTable = ({ connected }: { connected?: AddressType }) => {
     setBusy(o.id);
     try {
       const order = buildOrderTuple(o);
+      const fillMakerAmount = promptFillAmount(order.makerAmount);
+      if (fillMakerAmount === null) {
+        setBusy(null);
+        return;
+      }
+      // Pro-rata taker payment, ceil-rounded to favor maker.
+      const takerPay =
+        (fillMakerAmount * order.takerAmount + order.makerAmount - 1n) / order.makerAmount;
       // Approve TAB to TabClob if needed
-      await ensureErc20Approval(order.takerToken, connected, TABCLOB_ADDR, order.takerAmount);
+      await ensureErc20Approval(order.takerToken, connected, TABCLOB_ADDR, takerPay);
       await wagmiWriteContract(wagmiConfig, {
         address: TABCLOB_ADDR,
         abi: TABCLOB_FILL_ABI,
         functionName: "fill",
-        args: [order, o.signature as `0x${string}`],
+        args: [order, fillMakerAmount, o.signature as `0x${string}`],
         chainId: 31337,
-        gas: 400_000n,
+        gas: 500_000n,
       });
-      notification.success("Order filled");
-      // Optionally remove from CSV after a successful fill (so it doesn't get re-attempted).
-      await fetch(`/api/orders?id=${encodeURIComponent(o.id)}`, { method: "DELETE" });
+      notification.success(`Filled ${formatEther(fillMakerAmount)} of maker side`);
+      // If fully filled, remove from CSV so it doesn't get re-attempted.
+      if (fillMakerAmount === order.makerAmount) {
+        await fetch(`/api/orders?id=${encodeURIComponent(o.id)}`, { method: "DELETE" });
+      }
       refresh();
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     } finally {
       setBusy(null);
     }
@@ -470,7 +505,7 @@ const OrdersTable = ({ connected }: { connected?: AddressType }) => {
       await fetch(`/api/orders?id=${encodeURIComponent(o.id)}`, { method: "DELETE" });
       refresh();
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     } finally {
       setBusy(null);
     }

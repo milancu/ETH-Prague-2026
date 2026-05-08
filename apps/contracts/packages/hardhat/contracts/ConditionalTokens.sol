@@ -62,6 +62,20 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
         uint256 payout
     );
 
+    error ZeroAddress();
+    error BadSlotCount(uint256 outcomeSlotCount);
+    error AlreadyPrepared();
+    error PayoutsTooShort(uint256 length);
+    error ConditionNotPrepared();
+    error AlreadyResolved();
+    error ZeroDenominator();
+    error ZeroAmount();
+    error BadIndexSet(uint256 indexSet);
+    error PartitionTooShort(uint256 length);
+    error PartitionOverlap();
+    error IncompletePartition();
+    error NotResolved();
+
     constructor() ERC1155("") {}
 
     /* ----- ID helpers ----- */
@@ -111,12 +125,12 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
         bytes32 questionId,
         uint256 outcomeSlotCount
     ) external returns (bytes32 conditionId) {
-        require(oracle != address(0), "oracle=zero");
-        require(outcomeSlotCount >= 2 && outcomeSlotCount <= 256, "bad slot count");
+        if (oracle == address(0)) revert ZeroAddress();
+        if (outcomeSlotCount < 2 || outcomeSlotCount > 256) revert BadSlotCount(outcomeSlotCount);
         conditionId = getConditionId(oracle, questionId, outcomeSlotCount);
 
         Condition storage c = _conditions[conditionId];
-        require(c.outcomeSlotCount == 0, "already prepared");
+        if (c.outcomeSlotCount != 0) revert AlreadyPrepared();
 
         c.oracle = oracle;
         c.questionId = questionId;
@@ -130,13 +144,13 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
     ///         Denominator = sum(payouts). Pro ordinální resolution stačí oraclu rozdělit váhu.
     function reportPayouts(bytes32 questionId, uint256[] calldata payouts) external {
         uint256 N = payouts.length;
-        require(N >= 2, "payouts too short");
+        if (N < 2) revert PayoutsTooShort(N);
 
         bytes32 conditionId = getConditionId(msg.sender, questionId, N);
         Condition storage c = _conditions[conditionId];
 
-        require(c.outcomeSlotCount == N, "condition not prepared");
-        require(!c.resolved, "already resolved");
+        if (c.outcomeSlotCount != N) revert ConditionNotPrepared();
+        if (c.resolved) revert AlreadyResolved();
 
         uint256 denom;
         for (uint256 i = 0; i < N; i++) {
@@ -144,7 +158,7 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
             denom += p;
             c.payoutNumerators[i] = p;
         }
-        require(denom > 0, "denom=0");
+        if (denom == 0) revert ZeroDenominator();
         c.payoutDenominator = denom;
         c.resolved = true;
 
@@ -163,8 +177,8 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
     ) external nonReentrant {
         Condition storage c = _conditions[conditionId];
         uint256 N = c.outcomeSlotCount;
-        require(N > 0, "condition not prepared");
-        require(amount > 0, "zero amount");
+        if (N == 0) revert ConditionNotPrepared();
+        if (amount == 0) revert ZeroAmount();
 
         uint256 fullIndexSet = (N == 256) ? type(uint256).max : (uint256(1) << N) - 1;
         _validatePartition(partition, fullIndexSet);
@@ -193,8 +207,8 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
     ) external nonReentrant {
         Condition storage c = _conditions[conditionId];
         uint256 N = c.outcomeSlotCount;
-        require(N > 0, "condition not prepared");
-        require(amount > 0, "zero amount");
+        if (N == 0) revert ConditionNotPrepared();
+        if (amount == 0) revert ZeroAmount();
 
         uint256 fullIndexSet = (N == 256) ? type(uint256).max : (uint256(1) << N) - 1;
         _validatePartition(partition, fullIndexSet);
@@ -220,7 +234,7 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
         uint256[] calldata indexSets
     ) external nonReentrant {
         Condition storage c = _conditions[conditionId];
-        require(c.resolved, "not resolved");
+        if (!c.resolved) revert NotResolved();
         uint256 N = c.outcomeSlotCount;
         uint256 denom = c.payoutDenominator;
         uint256 fullIndexSet = (N == 256) ? type(uint256).max : (uint256(1) << N) - 1;
@@ -229,7 +243,7 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
 
         for (uint256 j = 0; j < indexSets.length; j++) {
             uint256 indexSet = indexSets[j];
-            require(indexSet > 0 && indexSet <= fullIndexSet, "bad indexSet");
+            if (indexSet == 0 || indexSet > fullIndexSet) revert BadIndexSet(indexSet);
 
             uint256 payoutNumerator;
             for (uint256 i = 0; i < N; i++) {
@@ -259,14 +273,14 @@ contract ConditionalTokens is ERC1155, ReentrancyGuard {
     /* ----- internals ----- */
 
     function _validatePartition(uint256[] calldata partition, uint256 fullIndexSet) internal pure {
-        require(partition.length >= 2, "partition too short");
+        if (partition.length < 2) revert PartitionTooShort(partition.length);
         uint256 union;
         for (uint256 i = 0; i < partition.length; i++) {
             uint256 set = partition[i];
-            require(set > 0 && set <= fullIndexSet, "bad indexSet");
-            require((union & set) == 0, "overlap");
+            if (set == 0 || set > fullIndexSet) revert BadIndexSet(set);
+            if ((union & set) != 0) revert PartitionOverlap();
             union |= set;
         }
-        require(union == fullIndexSet, "incomplete partition");
+        if (union != fullIndexSet) revert IncompletePartition();
     }
 }

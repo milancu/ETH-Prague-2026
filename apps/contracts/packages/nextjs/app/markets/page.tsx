@@ -17,15 +17,33 @@ import { useAccount } from "wagmi";
 import deployedContracts from "~~/contracts/deployedContracts";
 import { useScaffoldReadContract, useScaffoldWriteContract } from "~~/hooks/scaffold-eth";
 import { wagmiConfig } from "~~/services/web3/wagmiConfig";
-import { notification } from "~~/utils/scaffold-eth";
+import { getParsedError, notification } from "~~/utils/scaffold-eth";
 
-const OUTCOME_TYPES = ["BINARY", "MULTI", "SCALAR", "ORDINAL"] as const;
+const OUTCOME_TYPES = ["BINARY", "MULTI", "SCALAR"] as const;
 type OutcomeTypeName = (typeof OUTCOME_TYPES)[number];
 
-const minSlotsFor = (t: OutcomeTypeName): number => (t === "BINARY" || t === "SCALAR" ? 2 : t === "MULTI" ? 3 : 2);
+const minSlotsFor = (t: OutcomeTypeName): number => (t === "MULTI" ? 3 : 2);
+const maxSlotsFor = (t: OutcomeTypeName): number | undefined => (t === "BINARY" || t === "SCALAR" ? 2 : undefined);
+
+const defaultLabelsFor = (t: OutcomeTypeName, slots: number): string[] => {
+  if (t === "BINARY") return ["Ano", "Ne"];
+  if (t === "SCALAR") return ["Pod", "Nad"];
+  return Array.from({ length: slots }, (_, i) => `Možnost ${i + 1}`);
+};
 
 const toIsoLocal = (ts: bigint) => new Date(Number(ts) * 1000).toLocaleString();
 const nowSec = () => Math.floor(Date.now() / 1000);
+
+const formatRemaining = (expiresAt: bigint): string => {
+  const remaining = Number(expiresAt) - nowSec();
+  if (remaining <= 0) return "expired";
+  const d = Math.floor(remaining / 86400);
+  const h = Math.floor((remaining % 86400) / 3600);
+  const m = Math.floor((remaining % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+};
 
 type MarketStruct = {
   creator: AddressType;
@@ -34,12 +52,15 @@ type MarketStruct = {
   conditionId: `0x${string}`;
   outcomeSlotCount: bigint;
   outcomeType: number;
+  name: string;
   description: string;
   category: string;
+  outcomeLabels: string[];
   createdAt: bigint;
   expiresAt: bigint;
   resolutionTime: bigint;
   bondAmount: bigint;
+  lockedCollateral: bigint;
   bondClaimed: boolean;
   bondSlashed: boolean;
   verified: boolean;
@@ -122,10 +143,12 @@ const MarketsPage: NextPage = () => {
 export default MarketsPage;
 
 const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; connected?: AddressType }) => {
+  const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [category, setCategory] = useState("crypto");
   const [outcomeType, setOutcomeType] = useState<OutcomeTypeName>("BINARY");
   const [slots, setSlots] = useState(2);
+  const [outcomeLabels, setOutcomeLabels] = useState<string[]>(() => defaultLabelsFor("BINARY", 2));
   const [oracle, setOracle] = useState<string>("");
   const [expiresInHours, setExpiresInHours] = useState(24);
   const [resolveAfterHours, setResolveAfterHours] = useState(1);
@@ -152,19 +175,26 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
       await refetchAllowance();
       notification.success("Approve confirmed");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     } finally {
       setBusyApprove(false);
     }
   };
 
   const onCreate = async () => {
-    if (!description.trim()) return notification.error("Description required");
+    if (!name.trim()) return notification.error("Název trhu je povinný");
     if (!oracle || !/^0x[0-9a-fA-F]{40}$/.test(oracle)) {
       return notification.error("Bad oracle address");
     }
     if (slots < minSlotsFor(outcomeType)) {
       return notification.error(`${outcomeType} needs ≥ ${minSlotsFor(outcomeType)} slots`);
+    }
+    const max = maxSlotsFor(outcomeType);
+    if (max !== undefined && slots > max) {
+      return notification.error(`${outcomeType} max ${max} slots`);
+    }
+    if (outcomeLabels.length !== slots || outcomeLabels.some(l => !l.trim())) {
+      return notification.error(`Vyplň všech ${slots} názvů možností`);
     }
     if (needsApprove) return notification.error("Nejdřív schval TAB bond (krok 1).");
 
@@ -175,14 +205,47 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
     try {
       await writePMv2({
         functionName: "createMarket",
-        args: [description, category, outcomeIdx, BigInt(slots), oracle as AddressType, expiresAt, resolutionTime],
+        args: [
+          {
+            name,
+            description,
+            category,
+            outcomeType: outcomeIdx,
+            outcomeSlotCount: BigInt(slots),
+            outcomeLabels,
+            oracle: oracle as AddressType,
+            expiresAt,
+            resolutionTime,
+          },
+        ],
       });
       notification.success("Market created");
+      setName("");
       setDescription("");
       await refetchAllowance();
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
+  };
+
+  const updateOutcomeType = (t: OutcomeTypeName) => {
+    setOutcomeType(t);
+    const newSlots = minSlotsFor(t);
+    setSlots(newSlots);
+    setOutcomeLabels(defaultLabelsFor(t, newSlots));
+  };
+
+  const updateSlots = (s: number) => {
+    const min = minSlotsFor(outcomeType);
+    const max = maxSlotsFor(outcomeType);
+    const clamped = Math.max(min, max !== undefined ? Math.min(max, s) : s);
+    setSlots(clamped);
+    setOutcomeLabels(prev => {
+      const next = [...prev];
+      while (next.length < clamped) next.push(`Možnost ${next.length + 1}`);
+      next.length = clamped;
+      return next;
+    });
   };
 
   return (
@@ -195,8 +258,22 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
           <span>Connected: {connected ? <Address address={connected} /> : "—"}</span>
         </div>
 
-        <label className="label">Description</label>
-        <input className="input input-bordered" value={description} onChange={e => setDescription(e.target.value)} />
+        <label className="label">Název (krátký, povinný)</label>
+        <input
+          className="input input-bordered"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Např. Vyhraje Slavia ligový titul 2026?"
+          maxLength={120}
+        />
+
+        <label className="label mt-2">Description (delší popis, volitelný)</label>
+        <textarea
+          className="textarea textarea-bordered"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+          rows={3}
+        />
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
           <div>
@@ -212,11 +289,7 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
             <select
               className="select select-bordered w-full"
               value={outcomeType}
-              onChange={e => {
-                const v = e.target.value as OutcomeTypeName;
-                setOutcomeType(v);
-                setSlots(minSlotsFor(v));
-              }}
+              onChange={e => updateOutcomeType(e.target.value as OutcomeTypeName)}
             >
               {OUTCOME_TYPES.map(t => (
                 <option key={t} value={t}>
@@ -231,8 +304,10 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
               className="input input-bordered w-full"
               type="number"
               min={minSlotsFor(outcomeType)}
+              max={maxSlotsFor(outcomeType)}
               value={slots}
-              onChange={e => setSlots(Math.max(minSlotsFor(outcomeType), Number(e.target.value || 0)))}
+              disabled={maxSlotsFor(outcomeType) === minSlotsFor(outcomeType)}
+              onChange={e => updateSlots(Number(e.target.value || 0))}
             />
           </div>
           <div>
@@ -258,6 +333,33 @@ const CreateMarketForm = ({ defaultBond, connected }: { defaultBond?: bigint; co
               value={resolveAfterHours}
               onChange={e => setResolveAfterHours(Number(e.target.value || 0))}
             />
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <label className="label">
+            Názvy možností ({outcomeType === "SCALAR" ? "krajní hodnoty" : `${slots} možnosti`})
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {outcomeLabels.map((label, i) => (
+              <input
+                key={i}
+                className="input input-bordered w-full"
+                value={label}
+                placeholder={
+                  outcomeType === "SCALAR"
+                    ? i === 0
+                      ? "Nízká hodnota (např. 'Pod 100 USD')"
+                      : "Vysoká hodnota (např. 'Nad 200 USD')"
+                    : `Možnost ${i + 1}`
+                }
+                onChange={e => {
+                  const next = [...outcomeLabels];
+                  next[i] = e.target.value;
+                  setOutcomeLabels(next);
+                }}
+              />
+            ))}
           </div>
         </div>
 
@@ -301,11 +403,14 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
     conditionId,
     outcomeSlotCount,
     outcomeType,
+    name,
     description,
     category,
+    outcomeLabels,
     expiresAt,
     resolutionTime,
     bondAmount,
+    lockedCollateral,
     bondClaimed,
     bondSlashed,
     verified,
@@ -344,8 +449,16 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
           <span className="badge badge-ghost">{OUTCOME_TYPES[outcomeType]}</span>
           <span className="badge badge-ghost">{outcomeSlotCount.toString()} slots</span>
         </div>
-        <h3 className="font-bold text-lg">{description}</h3>
-        <div className="text-xs opacity-60 space-y-0.5 mt-1">
+        <h3 className="font-bold text-lg">{name || description}</h3>
+        {description && name && <p className="text-sm opacity-80 mt-0.5">{description}</p>}
+        <div className="flex gap-1 flex-wrap mt-2">
+          {outcomeLabels.map((label, i) => (
+            <span key={i} className="badge badge-outline">
+              {i}: {label}
+            </span>
+          ))}
+        </div>
+        <div className="text-xs opacity-60 space-y-0.5 mt-2">
           <div>category: {category}</div>
           <div className="flex gap-1 items-center">
             creator: <Address address={creator} />
@@ -353,7 +466,10 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
           <div className="flex gap-1 items-center">
             oracle: <Address address={oracle} />
           </div>
-          <div>expires: {toIsoLocal(expiresAt)}</div>
+          <div>
+            expires: {toIsoLocal(expiresAt)}{" "}
+            {!resolved && !canceled && <span className="badge badge-sm badge-ghost">{formatRemaining(expiresAt)}</span>}
+          </div>
           <div>resolves: {toIsoLocal(resolutionTime)}</div>
           <div>
             conditionId: <code className="text-[10px]">{conditionId.slice(0, 18)}…</code>
@@ -363,12 +479,14 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
             {bondClaimed && " · claimed"}
             {bondSlashed && " · slashed"}
           </div>
+          <div>locked TVL: {formatEther(lockedCollateral)} TAB</div>
         </div>
 
         <MarketActions
           marketId={marketId}
           conditionId={conditionId}
           outcomeSlotCount={outcomeSlotCount}
+          outcomeLabels={outcomeLabels}
           isCreator={isCreator}
           isOracle={isOracle}
           resolved={resolved}
@@ -384,6 +502,7 @@ const MarketActions = ({
   marketId,
   conditionId,
   outcomeSlotCount,
+  outcomeLabels,
   isCreator,
   isOracle,
   resolved,
@@ -393,6 +512,7 @@ const MarketActions = ({
   marketId: bigint;
   conditionId: `0x${string}`;
   outcomeSlotCount: bigint;
+  outcomeLabels: string[];
   isCreator: boolean;
   isOracle: boolean;
   resolved: boolean;
@@ -413,18 +533,37 @@ const MarketActions = ({
     contractName: "PositionWrapperFactory",
   });
 
+  // Use PMv2 helpers (splitTo, mergeFrom, splitAndWrap, claimWinnings) so the
+  // per-market `lockedCollateral` counter stays accurate. Direct CT calls are still
+  // possible but bypass the counter — debug UI prefers PMv2 path.
   const onSplit = async () => {
     if (!splitAmount) return notification.error("Amount required");
     const amount = parseEther(splitAmount);
     try {
-      await writeTab({ functionName: "approve", args: [CT_ADDR, amount] });
-      await writeCT({
-        functionName: "splitPosition",
-        args: [TAB_ADDR, conditionId, partition, amount],
+      await writeTab({ functionName: "approve", args: [PMV2_ADDR, amount] });
+      await writePMv2({
+        functionName: "splitTo",
+        args: [marketId, partition, amount],
       });
       notification.success(`Bought ${splitAmount} of all ${N} positions`);
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
+    }
+  };
+
+  const onMergeBack = async () => {
+    if (!splitAmount) return notification.error("Amount required");
+    const amount = parseEther(splitAmount);
+    try {
+      // user must let PMv2 pull their ERC-1155 positions
+      await writeCT({ functionName: "setApprovalForAll", args: [PMV2_ADDR, true] });
+      await writePMv2({
+        functionName: "mergeFrom",
+        args: [marketId, partition, amount],
+      });
+      notification.success(`Merged ${splitAmount} TAB back from full position set`);
+    } catch (e: unknown) {
+      notification.error(getParsedError(e));
     }
   };
 
@@ -443,7 +582,7 @@ const MarketActions = ({
       }
       notification.success(`Wrappery připravené pro všech ${N} slotů`);
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
@@ -452,24 +591,18 @@ const MarketActions = ({
     const indexSet = 1n << BigInt(wrapIndexBit);
     const amount = parseEther(splitAmount);
     try {
-      await writeFactory({
-        functionName: "getOrCreateWrapper",
-        args: [TAB_ADDR, conditionId, indexSet],
+      // PMv2.splitAndWrap pulls TAB, splits on CT, wraps the chosen slot, returns ERC-20 to user.
+      await writeTab({ functionName: "approve", args: [PMV2_ADDR, amount] });
+      await writePMv2({
+        functionName: "splitAndWrap",
+        args: [marketId, amount, [indexSet]],
       });
       const w = await readWrapperAddress(TAB_ADDR, conditionId, indexSet);
-      if (!w || w === zeroAddress) return notification.error("Wrapper not found after create");
-      await writeCT({ functionName: "setApprovalForAll", args: [w, true] });
-      await wagmiWriteContract(wagmiConfig, {
-        address: w,
-        abi: wrapAbi,
-        functionName: "wrap",
-        args: [amount],
-        // Stay under Base L2's 16.7M tx gas cap; wrap is ~115k.
-        gas: 500_000n,
-      });
-      notification.success(`Wrapped ${splitAmount} of slot ${wrapIndexBit} into ${w}`);
+      notification.success(
+        `Split & wrapped ${splitAmount} of "${outcomeLabels[wrapIndexBit] ?? `slot ${wrapIndexBit}`}" → ${w ?? "wrapper"}`,
+      );
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
@@ -481,7 +614,7 @@ const MarketActions = ({
       await writePMv2({ functionName: "resolveMarket", args: [marketId, payouts] });
       notification.success("Resolved");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
@@ -490,7 +623,7 @@ const MarketActions = ({
       await writePMv2({ functionName: "cancelMarket", args: [marketId] });
       notification.success("Canceled");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
@@ -499,19 +632,21 @@ const MarketActions = ({
       await writePMv2({ functionName: "claimCreatorBond", args: [marketId] });
       notification.success("Bond claimed");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
   const onRedeem = async () => {
     try {
-      await writeCT({
-        functionName: "redeemPositions",
-        args: [TAB_ADDR, conditionId, partition],
+      // claimWinnings pulls user's ERC-1155 positions, redeems on CT, returns TAB.
+      await writeCT({ functionName: "setApprovalForAll", args: [PMV2_ADDR, true] });
+      await writePMv2({
+        functionName: "claimWinnings",
+        args: [marketId, partition],
       });
-      notification.success("Redeemed");
+      notification.success("Claim výhry hotov");
     } catch (e: unknown) {
-      notification.error(e instanceof Error ? e.message : String(e));
+      notification.error(getParsedError(e));
     }
   };
 
@@ -528,7 +663,10 @@ const MarketActions = ({
           />
           <div className="flex gap-2 flex-wrap">
             <button className="btn btn-primary btn-sm" onClick={onSplit} disabled={resolved || canceled}>
-              Approve & Split
+              Approve & Split (PMv2)
+            </button>
+            <button className="btn btn-warning btn-sm" onClick={onMergeBack} disabled={resolved || canceled}>
+              Merge back → TAB
             </button>
             <select
               className="select select-bordered select-sm"
@@ -537,19 +675,19 @@ const MarketActions = ({
             >
               {Array.from({ length: N }, (_, i) => (
                 <option key={i} value={i}>
-                  Slot {i}
+                  {outcomeLabels[i] ?? `Slot ${i}`}
                 </option>
               ))}
             </select>
-            <button className="btn btn-secondary btn-sm" onClick={onWrap}>
-              Wrap slot to ERC-20
+            <button className="btn btn-secondary btn-sm" onClick={onWrap} disabled={resolved || canceled}>
+              Split &amp; wrap slot
             </button>
             <button className="btn btn-outline btn-sm" onClick={onCreateAllWrappers}>
               Create wrappers (no wrap)
             </button>
             {resolved && (
               <button className="btn btn-accent btn-sm" onClick={onRedeem}>
-                Redeem all positions
+                Claim winnings
               </button>
             )}
           </div>

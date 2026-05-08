@@ -4,7 +4,15 @@ pragma solidity ^0.8.24;
 import { Clones } from "@openzeppelin/contracts/proxy/Clones.sol";
 
 interface IPositionWrapperInit {
-    function initialize(string memory name_, string memory symbol_, address ct_, uint256 positionId_) external;
+    function initialize(
+        string memory name_,
+        string memory symbol_,
+        address ct_,
+        uint256 positionId_,
+        bytes32 conditionId_,
+        uint256 indexSet_,
+        address collateral_
+    ) external;
 }
 
 interface IConditionalTokensIds {
@@ -30,9 +38,11 @@ contract PositionWrapperFactory {
         address wrapper
     );
 
+    error ZeroAddress();
+
     constructor(address _wrapperImpl, address _ct) {
-        require(_wrapperImpl != address(0), "impl=zero");
-        require(_ct != address(0), "ct=zero");
+        if (_wrapperImpl == address(0)) revert ZeroAddress();
+        if (_ct == address(0)) revert ZeroAddress();
         wrapperImpl = _wrapperImpl;
         ct = _ct;
     }
@@ -64,7 +74,7 @@ contract PositionWrapperFactory {
         string memory symbol_ = string(abi.encodePacked("wPOS-", shortKey));
 
         w = Clones.clone(wrapperImpl);
-        IPositionWrapperInit(w).initialize(name_, symbol_, ct, positionId);
+        IPositionWrapperInit(w).initialize(name_, symbol_, ct, positionId, conditionId, indexSet, collateral);
         wrapperOf[k] = w;
 
         emit WrapperCreated(collateral, conditionId, indexSet, positionId, w);
