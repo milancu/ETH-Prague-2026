@@ -12,11 +12,11 @@ from slowapi.errors import RateLimitExceeded
 from api.lib.x402_mcp import mcp_x402_middleware
 from api.lib.x402_server import get_middleware, is_paywall_enabled
 from api.mcp.server import mcp as mcp_server
-from api.routes.ens_discovery import router as ens_discovery_router
-from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes import comments, markets, orders
 from api.routes.chat import limiter
 from api.routes.chat import router as chat_router
+from api.routes.ens_discovery import router as ens_discovery_router
+from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes.intelligence import router as intelligence_router
 from api.routes.markets import balance_router
 from api.routes.prepare import router as prepare_router
@@ -144,10 +144,7 @@ def health() -> dict[str, str]:
 # Serve integration docs + SKILL.md at /v1/integrations/*
 # ---------------------------------------------------------------------------
 
-_INTEGRATIONS_DIR = os.path.join(
-    os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, os.pardir,
-    "docs", "integrations",
-)
+_INTEGRATIONS_DIR = os.path.join(os.path.dirname(__file__), "integrations")
 
 
 @app.get("/v1/integrations", tags=["meta"])
