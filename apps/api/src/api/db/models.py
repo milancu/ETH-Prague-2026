@@ -59,6 +59,21 @@ class Market(SQLModel, table=True):
     status: str = Field(default="pending", max_length=20, index=True)
 
 
+class Comment(SQLModel, table=True):
+    """Off-chain comment on a market. Threaded via self-referential parent_id."""
+
+    __tablename__ = "comments"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=_utc_now)
+
+    market_id: int = Field(index=True)
+    parent_id: int | None = Field(default=None, foreign_key="comments.id", index=True)
+
+    author: str = Field(max_length=42)
+    content: str = Field(max_length=2000)
+
+
 class Order(SQLModel, table=True):
     """CLOB maker order — off-chain signed (EIP-712), on-chain filled by `TabClob.fill`.
 
