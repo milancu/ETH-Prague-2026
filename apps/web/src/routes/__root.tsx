@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router"
 import { ConnectButton } from "@/features/wallet/components/connect-button.tsx"
 import { useQuery } from "@tanstack/react-query"
@@ -10,6 +10,10 @@ import { useTheme } from "@/components/theme-provider"
 import { AnimatePresence, LayoutGroup, motion } from "motion/react"
 import { Menu, X } from "lucide-react"
 import logoUrl from "@/assets/logo.svg"
+import { ChatProvider } from "@/features/chat/chat-context"
+import ChatPanel from "@/features/chat/components/chat-panel"
+import KowalskyMark from "@/features/chat/components/kowalsky-mark"
+import { useMediaQuery } from "@/hooks/use-media-query"
 
 const NAV_LINKS = [
   { to: "/", label: "Markets" },
@@ -22,8 +26,13 @@ const NAV_LINKS = [
 const NAV_LINK_CLASS =
   "text-sm font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground [&.active]:font-semibold [&.active]:text-foreground"
 
+const SIDEBAR_W = 380
+const EASE = [0.23, 1, 0.32, 1] as const
+
 const RootLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [chatOpen, setChatOpen] = useState(false)
+  const isDesktop = useMediaQuery("(min-width: 640px)")
 
   const { theme } = useTheme()
   const resolvedTheme =
@@ -41,8 +50,18 @@ const RootLayout = () => {
     },
   })
 
+  // Esc closes the chat sidebar.
+  useEffect(() => {
+    if (!chatOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setChatOpen(false)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [chatOpen])
+
   return (
-    <>
+    <ChatProvider>
       <Toaster
         position="bottom-right"
         theme={resolvedTheme}
@@ -85,7 +104,7 @@ const RootLayout = () => {
                     initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
                     animate={{ opacity: 1, rotate: 0, scale: 1 }}
                     exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
-                    transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                    transition={{ duration: 0.15, ease: EASE }}
                     className="block"
                   >
                     {mobileOpen ? (
@@ -112,7 +131,13 @@ const RootLayout = () => {
               </nav>
             </div>
 
-            <ConnectButton />
+            <div className="flex items-center gap-2">
+              <AskKowalskiButton
+                open={chatOpen}
+                onToggle={() => setChatOpen((v) => !v)}
+              />
+              <ConnectButton />
+            </div>
           </div>
 
           {/* Mobile nav panel — absolutely positioned so it overlays content, not pushes it */}
@@ -122,7 +147,7 @@ const RootLayout = () => {
                 initial={{ opacity: 0, y: -6 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -6 }}
-                transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+                transition={{ duration: 0.18, ease: EASE }}
                 className="absolute inset-x-0 top-full border-b border-border bg-background sm:hidden"
               >
                 <div className="container mx-auto flex flex-col px-4 py-1">
@@ -145,43 +170,131 @@ const RootLayout = () => {
           </AnimatePresence>
         </header>
 
-        <ScrollArea className="min-h-0 flex-1">
-          <div className="flex min-h-full flex-col">
-            <main className="container mx-auto flex flex-1 flex-col p-4">
-              <LayoutGroup>
-                <Outlet />
-              </LayoutGroup>
-            </main>
+        {/* Body row: scrollable main + collapsible chat sidebar.
+            min-h-0 lets the ScrollArea actually constrain its child;
+            relative anchors the mobile overlay variant of the sidebar. */}
+        <div className="relative flex min-h-0 flex-1">
+          <ScrollArea className="min-h-0 min-w-0 flex-1">
+            <div className="flex min-h-full flex-col">
+              <main className="container mx-auto flex flex-1 flex-col p-4">
+                <LayoutGroup>
+                  <Outlet />
+                </LayoutGroup>
+              </main>
 
-            <footer
-              className="shrink-0 border-t border-border"
-              style={{ height: "var(--footer-h)" }}
+              <footer
+                className="shrink-0 border-t border-border"
+                style={{ height: "var(--footer-h)" }}
+              >
+                <div className="container mx-auto flex h-full items-center px-4">
+                  <p className="text-xs text-muted-foreground">
+                    Backend: {isLoading && <span>checking…</span>}
+                    {isError && (
+                      <span className="text-destructive">unreachable</span>
+                    )}
+                    {data && (
+                      <span
+                        className={cn(
+                          data.status === "ok"
+                            ? "text-emerald-400"
+                            : "text-amber-400"
+                        )}
+                      >
+                        {data.status}
+                      </span>
+                    )}
+                  </p>
+                </div>
+              </footer>
+            </div>
+          </ScrollArea>
+
+          {/* Desktop: in-flow aside, animates own width so main shrinks. */}
+          {isDesktop && (
+            <motion.aside
+              initial={false}
+              animate={{ width: chatOpen ? SIDEBAR_W : 0 }}
+              transition={{ duration: 0.32, ease: EASE }}
+              className="hidden shrink-0 overflow-hidden border-l border-border bg-background sm:block"
+              aria-hidden={!chatOpen}
             >
-              <div className="container mx-auto flex h-full items-center px-4">
-                <p className="text-xs text-muted-foreground">
-                  Backend: {isLoading && <span>checking…</span>}
-                  {isError && (
-                    <span className="text-destructive">unreachable</span>
-                  )}
-                  {data && (
-                    <span
-                      className={cn(
-                        data.status === "ok"
-                          ? "text-emerald-400"
-                          : "text-amber-400"
-                      )}
-                    >
-                      {data.status}
-                    </span>
-                  )}
-                </p>
+              {/* Inner is fixed-width so its layout doesn't reflow during the
+                  width animation — it slides into view, doesn't squish. */}
+              <div className="h-full" style={{ width: SIDEBAR_W }}>
+                <ChatPanel
+                  variant="sidebar"
+                  onClose={() => setChatOpen(false)}
+                />
               </div>
-            </footer>
-          </div>
-        </ScrollArea>
+            </motion.aside>
+          )}
+
+          {/* Mobile: absolute overlay slide-in from the right with backdrop. */}
+          {!isDesktop && (
+            <AnimatePresence>
+              {chatOpen && (
+                <>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.18, ease: EASE }}
+                    className="absolute inset-0 z-30 bg-background/60 backdrop-blur-[2px]"
+                    onClick={() => setChatOpen(false)}
+                    aria-hidden
+                  />
+                  <motion.aside
+                    initial={{ x: "100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "100%" }}
+                    transition={{ duration: 0.32, ease: EASE }}
+                    className="absolute inset-y-0 right-0 z-40 w-[min(420px,100vw)] border-l border-border bg-background"
+                  >
+                    <ChatPanel
+                      variant="sidebar"
+                      onClose={() => setChatOpen(false)}
+                    />
+                  </motion.aside>
+                </>
+              )}
+            </AnimatePresence>
+          )}
+        </div>
       </div>
-    </>
+    </ChatProvider>
   )
 }
+
+interface AskKowalskiButtonProps {
+  open: boolean
+  onToggle: () => void
+}
+
+const AskKowalskiButton = ({ open, onToggle }: AskKowalskiButtonProps) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-expanded={open}
+    aria-label={open ? "Zavřít Kowalského" : "Zeptej se Kowalského"}
+    data-active={open}
+    className={cn(
+      "group inline-flex items-center gap-2 border border-border bg-background py-1.5 pl-1.5 pr-2.5",
+      "transition-[transform,border-color,background-color,color] duration-150 ease-out",
+      "hover:border-foreground active:scale-[0.97]",
+      "data-[active=true]:border-foreground data-[active=true]:bg-foreground",
+    )}
+  >
+    <KowalskyMark size="sm" className="border-transparent" />
+    <span
+      className={cn(
+        "hidden font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground sm:inline",
+        "transition-colors duration-150 group-hover:text-foreground",
+        "group-data-[active=true]:text-background",
+      )}
+    >
+      Ask Kowalski
+    </span>
+  </button>
+)
 
 export const Route = createRootRoute({ component: RootLayout })

@@ -8,6 +8,7 @@ import {
   type ChatMessage,
   type ChatResponse,
 } from "./schema"
+import { maybePlayEasterEgg } from "./easter-eggs"
 
 const STORAGE_KEY = "kowalsky.chat.v1"
 const MAX_HISTORY = 50
@@ -99,6 +100,7 @@ export function useChat(): UseChatResult {
     (content: string, opts?: { origin?: SendOrigin }) => {
       const trimmed = content.trim()
       if (!trimmed) return
+      maybePlayEasterEgg(trimmed)
       pendingOriginRef.current = opts?.origin ?? "text"
       const userMsg: ChatMessage = {
         id: newId(),
