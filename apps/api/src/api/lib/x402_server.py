@@ -83,6 +83,7 @@ def _build_routes(pay_to: str) -> RoutesConfig:
         "POST /v1/intelligence/news": RouteConfig(accepts=standard),
         "POST /v1/intelligence/analyze": RouteConfig(accepts=standard),
         "POST /v1/intelligence/markets-with-buzz": RouteConfig(accepts=premium),
+        "GET /v1/ens-gateway/*": RouteConfig(accepts=standard),
     }
 
 

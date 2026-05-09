@@ -111,6 +111,7 @@ async def test_post_normalizes_creator_to_lowercase_and_persists_outcomes(
     assert detail["creator"] == "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     assert detail["outcomes"] == [{"label": "Yes"}, {"label": "No"}]
     assert detail["status"] == "pending"
+    assert detail["ens_name"] == "will-btc-exceed-100k-before-end-of-2026.kowalski.eth"
 
 
 async def test_datetime_fields_serialize_with_utc_z_suffix(

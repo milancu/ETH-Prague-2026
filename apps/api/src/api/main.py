@@ -1,3 +1,4 @@
+import asyncio
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -11,6 +12,8 @@ from slowapi.errors import RateLimitExceeded
 from api.lib.x402_mcp import mcp_x402_middleware
 from api.lib.x402_server import get_middleware, is_paywall_enabled
 from api.mcp.server import mcp as mcp_server
+from api.routes.ens_discovery import router as ens_discovery_router
+from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes import comments, markets, orders
 from api.routes.chat import limiter
 from api.routes.chat import router as chat_router
@@ -27,8 +30,18 @@ _mcp_sub_app = mcp_server.streamable_http_app()
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
+    from api.indexer.ens_bridge import ENSBridge, is_bridge_enabled
+
+    ens_task = None
+    if is_bridge_enabled():
+        bridge = ENSBridge()
+        ens_task = asyncio.create_task(bridge.run())
+
     async with mcp_server.session_manager.run():
         yield
+
+    if ens_task is not None:
+        ens_task.cancel()
 
 
 app = FastAPI(
@@ -114,6 +127,8 @@ app.include_router(comments.router)
 app.include_router(prepare_router)
 app.include_router(intelligence_router)
 app.include_router(chat_router)
+app.include_router(ens_gateway_router)
+app.include_router(ens_discovery_router)
 
 # Mount FastMCP at /mcp — streamable HTTP transport (modern MCP standard).
 # Clients connect to http://<host>/mcp or /mcp/.

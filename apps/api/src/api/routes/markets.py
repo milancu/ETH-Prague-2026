@@ -14,13 +14,14 @@ from datetime import UTC, datetime
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, ConfigDict, Field, field_serializer, field_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, field_serializer, field_validator
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
 from api.db.models import Market, Order
 from api.db.session import get_session
+from api.lib.ens import ens_name_for
 from api.lib.web3_client import get_client
 from api.llm.tools import chain as chain_tools
 from api.llm.tools.chain import get_wrapper_address, index_set_for_slot
@@ -138,6 +139,11 @@ class MarketRead(BaseModel):
     resolution_time: datetime
     status: str
     created_at: datetime
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def ens_name(self) -> str:
+        return ens_name_for(self.market_id, self.title)
 
     @field_serializer("expires_at", "resolution_time", "created_at")
     def _serialize_dt(self, v: datetime) -> str:
