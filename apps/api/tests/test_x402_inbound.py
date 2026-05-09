@@ -180,7 +180,9 @@ async def test_paid_request_returns_200(monkeypatch: pytest.MonkeyPatch) -> None
     account = Account.from_key(client_pk)
 
     x402_client = x402Client()
-    x402_client.register("eip155:8453", ExactEvmScheme(signer=account))
+    # Server runs on Base Sepolia (eip155:84532) — facilitator at x402.org
+    # only supports testnet.  Use a wildcard so any EVM chain match works.
+    x402_client.register("eip155:*", ExactEvmScheme(signer=account))
 
     # Hit the REAL running server (not the in-process ASGI transport)
     api_base = os.getenv("TEST_API_BASE_URL", "http://127.0.0.1:8000")

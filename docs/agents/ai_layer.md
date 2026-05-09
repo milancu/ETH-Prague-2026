@@ -101,7 +101,9 @@ Premium endpoints (`/v1/intelligence/*`) require x402 payment from the calling a
 - File: `apps/api/src/api/lib/x402_server.py`
 - Library: **`x402[fastapi,evm]`** — same official package as outbound, server-side primitives.
 - Auth: receiving wallet address from env (`X402_IN_WALLET_ADDRESS`).
-- Verification + settlement: outsourced to the **public x402 facilitator** at `https://x402.org/facilitator` via `HTTPFacilitatorClient`. We do not submit settlement transactions ourselves; the facilitator does, off our hot path.
+- **Network: Base Sepolia (`eip155:84532`).** The public x402 facilitator at `https://x402.org/facilitator` currently supports only testnet — Base mainnet support is on the roadmap. Inbound is therefore testnet for the hackathon. This is asymmetric with outbound (which is Base mainnet, since Apify mandates it). The same backend wallet keypair works on both chains — it just receives Sepolia USDC and sends Mainnet USDC, which are separate ERC-20 contracts.
+- USDC on Base Sepolia: `0x036CbD53842c5426634e7929541eC2318f3dCF7e`.
+- Verification + settlement: outsourced to the facilitator via `HTTPFacilitatorClient`. We do not submit settlement transactions ourselves.
 - Pricing per endpoint: see §4.2.
 - Implementation sketch:
 
@@ -369,15 +371,17 @@ The original Kowalsky chat spec — system prompt, tool registry, system rules, 
 
 ## 12. Wallets & funding
 
-Two backend-controlled wallets, plus one demo client wallet:
-
-| Wallet | Network | Holds | Purpose | Min funding |
+| Wallet | Network | Holds | Purpose | Funding |
 |---|---|---|---|---|
-| `X402_OUT_WALLET` | Base mainnet | USDC + ETH | pays Apify | $20 USDC + $5 ETH |
-| `X402_IN_WALLET` | Base mainnet | receives USDC from agents | revenue + observability | $0 (just an address) |
-| Demo client wallet | Base mainnet | USDC + ETH | simulates external agent in pitch | $5 USDC + $1 ETH |
+| `X402_OUT_WALLET` | Base **mainnet** | USDC + ETH | pays Apify | $20 USDC + $5 ETH (real money) |
+| `X402_IN_WALLET` | Base **Sepolia** | receives Sepolia USDC from agents | revenue observability + demo | $0 (only address needed) |
+| Demo client wallet | Base **Sepolia** | Sepolia USDC + Sepolia ETH | simulates external agent paying us | from faucets, free |
 
-In and out can be the **same wallet** for the hackathon to simplify; split later for accounting.
+**The same keypair** can serve as `X402_OUT_WALLET` and `X402_IN_WALLET` — EVM addresses are chain-agnostic. We just hold mainnet USDC for outbound and accept Sepolia USDC inbound on the same address.
+
+Faucets for the demo client wallet:
+- Sepolia ETH: <https://faucet.circle.com> or <https://www.alchemy.com/faucets/base-sepolia>
+- Sepolia USDC: <https://faucet.circle.com> (Circle's testnet faucet, gives $10 USDC)
 
 ---
 
@@ -386,7 +390,7 @@ In and out can be the **same wallet** for the hackathon to simplify; split later
 1. ~~Server-side x402 Python lib~~ — **resolved.** Use the official **[`x402` PyPI package](https://pypi.org/project/x402/)** v2.9+ from x402 Foundation (MIT, FastAPI middleware, EVM exact scheme on Base 8453, public facilitator at `x402.org/facilitator` for verification + settlement). Drops Phase 3 from "highest risk" to "half-day chore". Alternative `openlibx402` is Solana-only, irrelevant for our Base mainnet target.
 2. **PPE confirmation** for Reddit + News scrapers (Jakub Kopecký, Apify mentor on booth).
 3. **Wallet funding logistics** — who, when, how (CEX → bridge to Base mainnet).
-4. **Facilitator availability + cost** — `x402.org/facilitator` is the public default; verify uptime and any per-call gas reimbursement requirements before relying on it for the demo. Fallback: run our own facilitator locally (the same `x402` package supports this).
+4. ~~Facilitator availability + cost~~ — **resolved.** Public facilitator at `x402.org/facilitator` works but supports only Base Sepolia (`eip155:84532`), not Base mainnet (`eip155:8453`). Inbound therefore runs on Sepolia for the hackathon (see §3.2 and §12). Mainnet inbound would require either a different facilitator or running our own; not on hackathon scope.
 
 ---
 
