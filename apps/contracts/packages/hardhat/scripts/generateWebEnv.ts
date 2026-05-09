@@ -8,6 +8,7 @@ const CONTRACT_TO_ENV: Record<string, string> = {
   PredictionMarketV2: "VITE_PREDICTION_MARKET_ADDRESS",
   PositionWrapperFactory: "VITE_POSITION_WRAPPER_FACTORY_ADDRESS",
   TabClob: "VITE_TABCLOB_ADDRESS",
+  PredictionAMM: "VITE_PREDICTION_AMM_ADDRESS",
 };
 
 // Path from packages/hardhat/ to apps/web/

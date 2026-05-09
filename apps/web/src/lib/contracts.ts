@@ -10,7 +10,7 @@ function addr(key: string, fallback: string): `0x${string}` {
 
 export const PREDICTION_MARKET_ADDRESS = addr(
   "VITE_PREDICTION_MARKET_ADDRESS",
-  "0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93",
+  "0x64f7F7f1E89C8a059276CC6dfF7A965720D94e50",
 )
 
 export const TABCOIN_ADDRESS = addr(
@@ -25,12 +25,17 @@ export const CONDITIONAL_TOKENS_ADDRESS = addr(
 
 export const TABCLOB_ADDRESS = addr(
   "VITE_TABCLOB_ADDRESS",
-  "0xC34715695188b3cE1319C9BF7423713fB3C2A470",
+  "0x6f62254A1850b50A3ACc287e3dda0f0e53F1C961",
 )
 
 export const POSITION_WRAPPER_FACTORY_ADDRESS = addr(
   "VITE_POSITION_WRAPPER_FACTORY_ADDRESS",
   "0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81",
+)
+
+export const PREDICTION_AMM_ADDRESS = addr(
+  "VITE_PREDICTION_AMM_ADDRESS",
+  "0xf3916455D945731183De9ed26a6b7D5A835f9A2A",
 )
 
 // Set VITE_DEFAULT_ORACLE in .env.local (local: auto-written by deploy script via ORACLE_ADDRESS).
@@ -347,6 +352,73 @@ export const ERC20_ABI = [
       { name: "amount",  type: "uint256" },
     ],
     outputs: [{ name: "", type: "bool" }],
+  },
+] as const
+
+export const PREDICTION_AMM_ABI = [
+  {
+    name: "createPool",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",       type: "uint256" },
+      { name: "initialFunding", type: "uint256" },
+      { name: "feeBps",         type: "uint16"  },
+    ],
+    outputs: [{ name: "sharesMinted", type: "uint256" }],
+  },
+  {
+    name: "buy",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",         type: "uint256" },
+      { name: "outcomeIndex",     type: "uint8"   },
+      { name: "investmentAmount", type: "uint256" },
+      { name: "minOutcomeOut",    type: "uint256" },
+    ],
+    outputs: [{ name: "outcomeOut", type: "uint256" }],
+  },
+  {
+    name: "sell",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",     type: "uint256" },
+      { name: "outcomeIndex", type: "uint8"   },
+      { name: "returnAmount", type: "uint256" },
+      { name: "maxOutcomeIn", type: "uint256" },
+    ],
+    outputs: [{ name: "outcomeIn", type: "uint256" }],
+  },
+  {
+    name: "getReserves",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "marketId", type: "uint256" }],
+    outputs: [{ name: "", type: "uint256[]" }],
+  },
+  {
+    name: "getPool",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "marketId", type: "uint256" }],
+    outputs: [
+      {
+        name: "",
+        type: "tuple",
+        components: [
+          { name: "exists",           type: "bool"      },
+          { name: "outcomeSlotCount", type: "uint8"     },
+          { name: "feeBps",           type: "uint16"    },
+          { name: "conditionId",      type: "bytes32"   },
+          { name: "totalShares",      type: "uint256"   },
+          { name: "feeAccumulated",   type: "uint256"   },
+          { name: "reserves",         type: "uint256[]" },
+          { name: "wrappers",         type: "address[]" },
+        ],
+      },
+    ],
   },
 ] as const
 
