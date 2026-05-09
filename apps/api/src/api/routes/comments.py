@@ -1,7 +1,7 @@
-"""Comments endpoints (`/markets/{market_id}/comments`).
+"""Comments endpoints (`/v1/markets/{market_id}/comments`).
 
-GET  /markets/{market_id}/comments        — public, returns nested tree
-POST /markets/{market_id}/comments        — requires wallet address in body
+GET  /v1/markets/{market_id}/comments     — public, returns nested tree
+POST /v1/markets/{market_id}/comments     — requires wallet address in body
                                             (full SIWE auth wires in at T3.5)
 """
 
@@ -82,7 +82,7 @@ def _build_tree(rows: list[Comment]) -> list[CommentNode]:
 
 # ── Router ────────────────────────────────────────────────────────────────────
 
-router = APIRouter(tags=["comments"])
+router = APIRouter(prefix="/v1", tags=["comments"])
 
 
 @router.get(
