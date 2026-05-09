@@ -188,9 +188,13 @@ async def test_paid_request_returns_200(monkeypatch: pytest.MonkeyPatch) -> None
     api_base = os.getenv("TEST_API_BASE_URL", "http://127.0.0.1:8000")
 
     async with x402HttpxClient(x402_client) as http:
+        # Default httpx read timeout (5s) is way too short — the chain is
+        # facilitator verify + Sepolia settle + Apify outbound scrape, easily
+        # 15-30s end-to-end.
         resp = await http.post(
             f"{api_base}/v1/intelligence/tweets",
             json={"query": "Ethereum price", "max_items": 5},
+            timeout=120.0,
         )
 
     assert resp.status_code == 200, (
