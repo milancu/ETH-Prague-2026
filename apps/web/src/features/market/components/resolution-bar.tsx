@@ -29,7 +29,12 @@ export function ResolutionBar({ market }: Props) {
     return slots.map((_, i) => (i === selected ? 1n : 0n))
   }, [selected, slots])
 
-  const { resolveMarket, isPending, canResolve } = useResolveMarket(market, payouts)
+  const { resolveMarket, isPending, canResolve, simulateError } = useResolveMarket(market, payouts)
+
+  const revertReason =
+    simulateError && "shortMessage" in simulateError
+      ? (simulateError as { shortMessage?: string }).shortMessage ?? simulateError.message
+      : simulateError?.message
 
   if (!canSeeResolver) return null
   if (market.status !== "open" && market.status !== "pending") return null
@@ -71,10 +76,15 @@ export function ResolutionBar({ market }: Props) {
         onClick={handleResolve}
         disabled={!canResolve || isPending}
         variant="outline"
+        title={selected === null ? "Select an outcome first" : revertReason}
         className="self-start border-amber-500/30 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 disabled:opacity-40"
       >
         {isPending ? "Resolving…" : "Resolve Market"}
       </Button>
+
+      {selected !== null && revertReason ? (
+        <p className="text-[11px] text-red-400">{revertReason}</p>
+      ) : null}
     </div>
   )
 }

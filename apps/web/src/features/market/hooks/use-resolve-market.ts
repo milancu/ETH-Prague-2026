@@ -13,7 +13,7 @@ export function useResolveMarket(market: Market, payouts: bigint[]) {
   const queryClient = useQueryClient()
   const [isPending, setIsPending] = useState(false)
 
-  const { data: simulation } = useSimulateContract({
+  const { data: simulation, error: simulateError } = useSimulateContract({
     address: PREDICTION_MARKET_ADDRESS,
     abi: PREDICTION_MARKET_ABI,
     functionName: "resolveMarket",
@@ -49,5 +49,5 @@ export function useResolveMarket(market: Market, payouts: bigint[]) {
     }
   }
 
-  return { resolveMarket, isPending, canResolve: !!simulation }
+  return { resolveMarket, isPending, canResolve: !!simulation, simulateError }
 }
