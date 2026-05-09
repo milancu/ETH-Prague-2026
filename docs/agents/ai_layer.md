@@ -218,10 +218,23 @@ Auto-generated at startup. Every public endpoint must:
 
 A second adapter over the same tool implementation, for agents that natively speak MCP (Claude Code, Cursor, Continue, custom MCP clients).
 
-- Endpoint: `wss://api.our-domain/mcp` (production) or `localhost:8000/mcp` (dev).
+- Endpoint: `https://api.our-domain/mcp` (production) or `http://localhost:8000/mcp` (dev).
+- Transport: **Streamable HTTP** (modern MCP standard, single POST endpoint, JSON-RPC over HTTP with optional SSE responses). SSE-only transport is not exposed.
 - Implementation: `apps/api/src/api/mcp/server.py`, using the `mcp` Python package from PyPI.
-- Tools advertised: same as REST §4. Same Pydantic schemas, same handlers.
-- x402 metadata is exposed in tool descriptors so MCP clients can show "this tool costs $0.50" before invocation.
+- Mount: FastMCP's Starlette ASGI sub-app is mounted at `/mcp` under the same `apps/api` FastAPI process. Lifespan: the FastAPI app's `lifespan` context manager wraps `mcp_server.session_manager.run()` so the streamable-HTTP task group runs for the lifetime of the API.
+- Tools advertised: same surface as REST §4 — list_markets, get_market, get_market_orderbook, get_user_positions, get_tab_balance, prepare_buy/sell/create_market/claim/merge/cancel_order, fetch_tweets/reddit/news, analyze_market, markets_with_buzz. Handlers reuse `llm/tools/*` and `lib/web3_client` directly; the MCP server is a thin adapter.
+- x402 metadata is exposed in tool descriptors via the MCP `_meta` field — `{"x402_price_usd": 0.50, "x402_network": "eip155:84532", "x402_pay_to": "0x..."}` — so MCP clients can show pricing before invocation.
+
+### x402 enforcement on MCP
+
+All MCP tool calls arrive as `POST /mcp` with the tool name in the JSON-RPC body. The path-based REST middleware (`payment_middleware`) cannot differentiate per-tool because the path is always the same. We therefore use a dedicated middleware (`apps/api/src/api/lib/x402_mcp.py`) that:
+
+1. Buffers the incoming request body (Starlette caches `request._body` after first read; the mounted FastMCP sub-app reads from the same cached buffer).
+2. Parses the JSON-RPC body to identify `method == "tools/call"` and the tool name.
+3. If the tool is paywalled and no `X-Payment` header is present, returns HTTP 402 with payment requirements JSON — the same x402 challenge issued by the REST middleware.
+4. If a valid `X-Payment` header is present, verifies via `x402ResourceServer.verify_payment` (shared singleton with the REST paywall — one facilitator handshake), passes through to FastMCP, then settles.
+
+Choice rationale: the HTTP middleware approach keeps the x402 contract identical between REST and MCP (real HTTP 402 responses, real challenge/sign/verify dance) and lets MCP clients with x402 client support (e.g. via `x402` PyPI client) sign and retry transparently. In-handler enforcement was rejected because MCP tool errors are JSON-RPC-level, not HTTP-level, and would not trigger automatic retry in x402-aware clients.
 
 This is **Tier 2** — not blocking the MVP. Skip if time short, ship REST + integration guides first.
 

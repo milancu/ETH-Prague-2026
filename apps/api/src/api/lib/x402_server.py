@@ -35,12 +35,39 @@ _MiddlewareFn = Callable[
 
 # Lazily-initialised singletons — created on first protected request so that
 # missing env vars surface at request time, not at import/startup time.
+_cached_server: x402ResourceServer | None = None
 _cached_fn: _MiddlewareFn | None = None
 
 
 def is_paywall_enabled() -> bool:
     """True when X402_IN_WALLET_ADDRESS is set and non-empty."""
     return bool(os.environ.get("X402_IN_WALLET_ADDRESS", ""))
+
+
+def _build_server() -> x402ResourceServer:
+    """Create and return the x402ResourceServer singleton (without initializing)."""
+    global _cached_server
+    if _cached_server is None:
+        facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=_FACILITATOR_URL))
+        _cached_server = x402ResourceServer(facilitator)
+        _cached_server.register(_NETWORK, ExactEvmServerScheme())  # type: ignore[no-untyped-call]
+    return _cached_server
+
+
+def get_resource_server() -> x402ResourceServer:
+    """Return the initialized x402ResourceServer singleton.
+
+    Shared between REST middleware and MCP middleware so the facilitator
+    handshake (initialize()) runs exactly once.
+
+    Raises RuntimeError if X402_IN_WALLET_ADDRESS is not set.
+    """
+    if not is_paywall_enabled():
+        raise RuntimeError(
+            "X402_IN_WALLET_ADDRESS is not set — "
+            "configure it before the paywall can verify payments"
+        )
+    return _build_server()
 
 
 def _build_routes(pay_to: str) -> RoutesConfig:
@@ -72,8 +99,6 @@ def get_middleware() -> _MiddlewareFn:
                 "X402_IN_WALLET_ADDRESS is not set — "
                 "configure it before the paywall can verify payments"
             )
-        facilitator = HTTPFacilitatorClient(FacilitatorConfig(url=_FACILITATOR_URL))
-        server = x402ResourceServer(facilitator)
-        server.register(_NETWORK, ExactEvmServerScheme())  # type: ignore[no-untyped-call]
+        server = _build_server()
         _cached_fn = payment_middleware(_build_routes(pay_to), server)
     return _cached_fn
