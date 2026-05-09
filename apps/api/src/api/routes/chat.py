@@ -8,9 +8,7 @@ from __future__ import annotations
 
 import os
 import re
-from typing import Any
-
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel, Field, field_validator
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -25,6 +23,8 @@ _ADDR_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 _MAX_MESSAGE_LENGTH = 2000
 _DEFAULT_CHAIN_ID = int(os.getenv("CHAIN_ID", "31337"))
+# Chains we have contract bindings + RPC defaults for (web3_client._CHAIN_DEFAULTS).
+_SUPPORTED_CHAINS = frozenset({31337, 84532})
 
 limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(prefix="/v1/chat", tags=["chat"])
@@ -48,6 +48,9 @@ class ChatMessage(BaseModel):
 class ChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(min_length=1, max_length=50)
     user_address: str | None = Field(default=None)
+    # The chain the user's wallet is connected to. If absent, we fall back to
+    # CHAIN_ID env. Reads + TxCard calldata are scoped to this chain.
+    chain_id: int | None = Field(default=None, ge=1)
 
     @field_validator("user_address")
     @classmethod
@@ -57,19 +60,22 @@ class ChatRequest(BaseModel):
         return v.lower() if v else None
 
 
-class TxCardResponse(BaseModel):
+class TxStep(BaseModel):
     to: str
     data: str
     value: str = "0"
-    chain_id: int | None = None
     summary: str
-    requires: list[dict[str, str]] = Field(default_factory=list)
+
+
+class TxCardResponse(TxStep):
+    chain_id: int
+    requires: list[TxStep] = Field(default_factory=list)
     notice: str | None = None
 
 
 class ChatResponse(BaseModel):
     text: str
-    tx_cards: list[dict[str, Any]]
+    tx_cards: list[TxCardResponse]
 
 
 # ---------------------------------------------------------------------------
@@ -92,11 +98,21 @@ async def chat(
     request: Request,
     session: AsyncSession = Depends(get_session),
 ) -> ChatResponse:
-    client = get_client(_DEFAULT_CHAIN_ID)
+    chain_id = body.chain_id or _DEFAULT_CHAIN_ID
+    if chain_id not in _SUPPORTED_CHAINS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unsupported chain {chain_id}. "
+                f"Supported: {sorted(_SUPPORTED_CHAINS)}."
+            ),
+        )
+
+    client = get_client(chain_id)
     ctx = ToolContext(
         session=session,
         client=client,
-        chain_id=_DEFAULT_CHAIN_ID,
+        chain_id=chain_id,
         user_address=body.user_address,
     )
 

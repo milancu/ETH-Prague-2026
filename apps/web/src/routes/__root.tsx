@@ -15,6 +15,7 @@ const NAV_LINKS = [
   { to: "/", label: "Markets" },
   { to: "/orders", label: "Orders" },
   { to: "/positions", label: "Positions" },
+  { to: "/chat", label: "Chat" },
   { to: "/faucet", label: "Faucet" },
 ] as const
 
@@ -57,9 +58,20 @@ const RootLayout = () => {
           },
         }}
       />
-      <div className="flex h-dvh flex-col overflow-hidden">
-        <header className="relative z-50 shrink-0 border-b border-border">
-          <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+      <div
+        className="flex h-dvh flex-col overflow-hidden"
+        style={
+          {
+            "--header-h": "3.5rem",
+            "--footer-h": "3rem",
+          } as React.CSSProperties
+        }
+      >
+        <header
+          className="relative z-50 shrink-0 border-b border-border"
+          style={{ height: "var(--header-h)" }}
+        >
+          <div className="container mx-auto flex h-full items-center justify-between gap-4 px-4">
             <div className="flex items-center gap-3 sm:gap-6">
               {/* Mobile hamburger — first on mobile, hidden on desktop */}
               <button
@@ -135,14 +147,17 @@ const RootLayout = () => {
 
         <ScrollArea className="min-h-0 flex-1">
           <div className="flex min-h-full flex-col">
-            <main className="container mx-auto flex-1 p-4">
+            <main className="container mx-auto flex flex-1 flex-col p-4">
               <LayoutGroup>
                 <Outlet />
               </LayoutGroup>
             </main>
 
-            <footer className="border-t border-border">
-              <div className="container mx-auto p-4">
+            <footer
+              className="shrink-0 border-t border-border"
+              style={{ height: "var(--footer-h)" }}
+            >
+              <div className="container mx-auto flex h-full items-center px-4">
                 <p className="text-xs text-muted-foreground">
                   Backend: {isLoading && <span>checking…</span>}
                   {isError && (
