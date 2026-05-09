@@ -66,7 +66,9 @@ class BuyRequest(BaseModel):
     slot: int = Field(ge=0, description="Outcome slot index (0=NO, 1=YES for binary)")
     amount_tab: str = Field(description="TAB to spend, in wei (decimal string)")
     user_address: str = Field(description="Taker wallet address")
-    slippage_bps: int = Field(default=100, ge=0, le=10000, description="Max slippage in bps")
+    slippage_bps: int = Field(
+        default=100, ge=0, le=10000, description="Max slippage in bps"
+    )
 
     @field_validator("amount_tab")
     @classmethod
@@ -132,7 +134,9 @@ class CreateMarketRequest(BaseModel):
 
 class ClaimRequest(BaseModel):
     market_id: int = Field(ge=0)
-    index_sets: list[int] = Field(min_length=1, description="Winning outcome indexSets to redeem")
+    index_sets: list[int] = Field(
+        min_length=1, description="Winning outcome indexSets to redeem"
+    )
     chain_id: int = Field(default=31337)
 
 
@@ -140,7 +144,10 @@ class MergeRequest(BaseModel):
     market_id: int = Field(ge=0)
     partition: list[int] = Field(
         default_factory=lambda: [1, 2],
-        description="IndexSets that partition the full outcome set (default: [1,2] for binary)",
+        description=(
+            "IndexSets that partition the full outcome set "
+            "(default: [1,2] for binary)"
+        ),
     )
     amount: str = Field(description="Collateral amount to recover, in wei")
     chain_id: int = Field(default=31337)
@@ -154,7 +161,9 @@ class MergeRequest(BaseModel):
 
 
 class CancelOrderRequest(BaseModel):
-    order_id: str = Field(description="Off-chain order ID (from POST /v1/orders response)")
+    order_id: str = Field(
+        description="Off-chain order ID (from POST /v1/orders response)"
+    )
     chain_id: int = Field(default=31337)
 
 
@@ -181,7 +190,10 @@ async def _fetch_market(session: AsyncSession, market_id: int) -> Market:
     if market is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"market {market_id} not found — register it via POST /v1/markets first",
+            detail=(
+                f"market {market_id} not found — "
+                "register it via POST /v1/markets first"
+            ),
         )
     return market
 
@@ -208,7 +220,7 @@ router = APIRouter(prefix="/v1/prepare", tags=["free"])
     summary="Build buy calldata",
     description=(
         "Tries to fill from the CLOB order book; falls back to `PMv2.splitAndWrap` "
-        "if there is insufficient liquidity.  Returns a `TxCard` the agent signs and broadcasts."
+        "if insufficient liquidity. Returns a `TxCard` the agent signs and broadcasts."
     ),
 )
 async def prepare_buy(
@@ -221,7 +233,10 @@ async def prepare_buy(
     if body.slot >= len(market.outcomes):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=f"slot {body.slot} out of range (market has {len(market.outcomes)} outcomes)",
+            detail=(
+                f"slot {body.slot} out of range "
+                f"(market has {len(market.outcomes)} outcomes)"
+            ),
         )
 
     orders_stmt = select(Order).where(Order.market_id == body.market_id)
@@ -400,8 +415,9 @@ async def prepare_claim(body: ClaimRequest) -> TxCard:
     response_model=TxCard,
     summary="Build mergeFrom calldata",
     description=(
-        "Encodes `PredictionMarketV2.mergeFrom(marketId, partition, amount)` to recover "
-        "TAB by burning a full position set.  `partition` defaults to `[1, 2]` for binary markets."
+        "Encodes `PMv2.mergeFrom(marketId, partition, amount)` to recover "
+        "TAB by burning a full position set. "
+        "`partition` defaults to `[1, 2]` for binary markets."
     ),
 )
 async def prepare_merge(body: MergeRequest) -> TxCard:

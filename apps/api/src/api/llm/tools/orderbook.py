@@ -17,7 +17,6 @@ from decimal import Decimal, InvalidOperation
 
 from api.db.models import Order
 
-
 # ---------------------------------------------------------------------------
 # Price helpers
 # ---------------------------------------------------------------------------
@@ -89,10 +88,12 @@ def build_orderbook(
 
     `slot_wrapper_map` is {slot_index: wrapper_address_lower}.
     Returns { "bids": [...], "asks": [...] } — each list sorted by price.
-    Each entry: {slot, label, side, maker, maker_amount, taker_amount, price, order_id, expiry}.
+    Each entry: {slot, side, maker, maker_amount, taker_amount, price, order_id}.
     """
     # Invert: wrapper_address → slot
-    wrapper_to_slot: dict[str, int] = {v.lower(): k for k, v in slot_wrapper_map.items()}
+    wrapper_to_slot: dict[str, int] = {
+        v.lower(): k for k, v in slot_wrapper_map.items()
+    }
 
     bids: list[dict[str, object]] = []
     asks: list[dict[str, object]] = []

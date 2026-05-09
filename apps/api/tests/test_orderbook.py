@@ -9,8 +9,6 @@ from __future__ import annotations
 import time
 from decimal import Decimal
 
-import pytest
-
 from api.llm.tools.orderbook import (
     build_orderbook,
     classify_order,

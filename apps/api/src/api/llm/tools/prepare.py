@@ -10,16 +10,13 @@ AI consent rule (docs/constitution.md §5):
 from __future__ import annotations
 
 import secrets
-import time
 from typing import Any
 
-from eth_abi.packed import encode_packed
 from web3 import Web3
 
 from api.lib.web3_client import Web3Client
 from api.llm.tools.chain import get_wrapper_address, index_set_for_slot
 from api.llm.tools.orderbook import find_best_asks
-
 
 # ---------------------------------------------------------------------------
 # Shared output models (plain dicts — Pydantic wrapping happens in routes)
@@ -58,16 +55,22 @@ def _tx_card(
 # ---------------------------------------------------------------------------
 
 
-def _approve_calldata(client: Web3Client, token_address: str, spender: str, amount: int) -> str:
+def _approve_calldata(
+    client: Web3Client, token_address: str, spender: str, amount: int
+) -> str:
     token = client.position_wrapper(token_address)
     return client.w3.to_hex(
         token.encode_abi("approve", args=[Web3.to_checksum_address(spender), amount])
     )
 
 
-def _tab_approve_tx(client: Web3Client, spender: str, amount: int, summary: str) -> dict[str, Any]:
+def _tab_approve_tx(
+    client: Web3Client, spender: str, amount: int, summary: str
+) -> dict[str, Any]:
     data = client.w3.to_hex(
-        client.tab.encode_abi("approve", args=[Web3.to_checksum_address(spender), amount])
+        client.tab.encode_abi(
+            "approve", args=[Web3.to_checksum_address(spender), amount]
+        )
     )
     return _tx(to=client.tab.address, data=data, summary=summary)
 
@@ -106,7 +109,7 @@ def prepare_buy(
             amount_tab=amount_tab,
         )
         if fills:
-            # Build TabClob.fill calldata for each fill (first fill for now; multi-fill = multi-tx)
+            # Build fill calldata (first fill only; multi-fill = multi-tx)
             order_obj, fill_maker_amount = fills[0]
 
             # Reconstruct the on-chain Order struct tuple
@@ -175,13 +178,17 @@ def prepare_buy(
     ]
     notice = (
         "No liquidity found on the order book — minting positions from collateral. "
-        f"You will receive {human_tab:.4f} {label} tokens plus {human_tab:.4f} NO tokens."
+        f"You will receive {human_tab:.4f} {label} tokens "
+        f"plus {human_tab:.4f} NO tokens."
     )
     return _tx_card(
         to=client.pmv2.address,
         data=split_data,
         chain_id=chain_id,
-        summary=f"Mint {human_tab:.4f} {label}+NO positions in market #{market_id} (no CLOB liquidity)",
+        summary=(
+            f"Mint {human_tab:.4f} {label}+NO positions in market "
+            f"#{market_id} (no CLOB liquidity)"
+        ),
         requires=requires,
         value="0",
     ) | {"notice": notice}
@@ -220,7 +227,6 @@ def prepare_sell(
         )
 
     salt = int.from_bytes(secrets.token_bytes(32), "big")
-    domain_separator: bytes = client.tab_clob.functions.DOMAIN_SEPARATOR().call()
 
     order_message = {
         "maker": Web3.to_checksum_address(user_address),
@@ -274,7 +280,6 @@ def prepare_sell(
     )
 
     human_maker = maker_amount / 10**18
-    human_taker = taker_amount / 10**18
     price = taker_amount / maker_amount if maker_amount else 0
 
     return {
@@ -286,7 +291,8 @@ def prepare_sell(
         ),
         "chain_id": chain_id,
         "summary": (
-            f"Sell {human_maker:.4f} {label} at {price:.4f} TAB each in market #{market_id}"
+            f"Sell {human_maker:.4f} {label} at "
+            f"{price:.4f} TAB each in market #{market_id}"
         ),
         "order_template": {
             "maker": order_message["maker"],
@@ -428,7 +434,10 @@ def prepare_merge(
         to=client.pmv2.address,
         data=merge_data,
         chain_id=chain_id,
-        summary=f"Recover {human_amount:.4f} TAB by merging positions in market #{market_id}",
+        summary=(
+            f"Recover {human_amount:.4f} TAB by merging positions "
+            f"in market #{market_id}"
+        ),
         requires=requires,
     )
 

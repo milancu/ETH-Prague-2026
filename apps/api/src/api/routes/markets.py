@@ -210,7 +210,9 @@ class BalanceResponse(BaseModel):
 
 def _get_market_or_404(market: Market | None) -> Market:
     if market is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="market not found")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="market not found"
+        )
     return market
 
 
@@ -279,7 +281,10 @@ async def create_market(
     "",
     response_model=MarketsListResponse,
     summary="List markets",
-    description="Paginated list of registered markets.  Filter by category, status, or outcome type.",
+    description=(
+        "Paginated list of registered markets. "
+        "Filter by category, status, or outcome type."
+    ),
 )
 async def list_markets(
     session: AsyncSession = Depends(get_session),
@@ -329,7 +334,7 @@ async def list_markets(
     "/{market_id}",
     response_model=MarketRead,
     summary="Get market detail",
-    description="Full metadata for one market.  `market_id` is the on-chain integer ID.",
+    description="Full metadata for one market. `market_id` is the on-chain integer ID.",
 )
 async def get_market(
     market_id: int,
@@ -368,7 +373,6 @@ async def get_market_orderbook(
     db_orders: list[Order] = list((await session.execute(orders_stmt)).scalars().all())
 
     client = get_client(market.chain_id)
-    labels = _outcome_labels(market)
     slot_count = len(market.outcomes)
 
     # Resolve wrapper addresses for each slot — one chain call per slot
