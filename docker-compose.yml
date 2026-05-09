@@ -31,6 +31,14 @@ services:
       X402_OUT_WALLET_PK: ${X402_OUT_WALLET_PK:?X402_OUT_WALLET_PK is required}
       # Inbound — address agents pay for premium MCP tools.
       X402_IN_WALLET_ADDRESS: ${X402_IN_WALLET_ADDRESS:?X402_IN_WALLET_ADDRESS is required}
+      # ── Contract addresses (Base Sepolia) ─────────────────────────────────
+      # Required by the ENS bridge and prepare/* endpoints.  Override only if
+      # contracts are redeployed.
+      TAB_ADDRESS_84532: ${TAB_ADDRESS_84532:-0xe987bdb99fE70af574D4d9eeA5A7700fe29feB16}
+      CT_ADDRESS_84532: ${CT_ADDRESS_84532:-0x912c5a72B5a024Ff88987B19632D670185c5A65e}
+      PMV2_ADDRESS_84532: ${PMV2_ADDRESS_84532:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+      WRAPPER_FACTORY_ADDRESS_84532: ${WRAPPER_FACTORY_ADDRESS_84532:-0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81}
+      TAB_CLOB_ADDRESS_84532: ${TAB_CLOB_ADDRESS_84532:-0xC34715695188b3cE1319C9BF7423713fB3C2A470}
     volumes:
       - api_data:/app/data
     ports:

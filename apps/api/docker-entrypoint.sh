@@ -1,11 +1,12 @@
 #!/bin/sh
 set -e
 
-# Import the outbound x402 wallet into mcpc so `mcpc x402 sign ...` works
-# from inside lib/apify_x402.py.  mcpc stores the key under $HOME/.mcpc and
-# overwriting on each start is idempotent — keeps the key in sync with .env.
+# Re-import the outbound x402 wallet into mcpc on every start so the key in
+# /root/.mcpc stays in sync with the env var.  `mcpc x402 import` refuses to
+# overwrite, so we remove the existing wallet first (no-op on first run).
 if [ -n "$X402_OUT_WALLET_PK" ]; then
-  echo "[entrypoint] importing X402_OUT_WALLET_PK into mcpc"
+  echo "[entrypoint] syncing X402_OUT_WALLET_PK into mcpc"
+  mcpc x402 remove >/dev/null 2>&1 || true
   mcpc x402 import "$X402_OUT_WALLET_PK" >/dev/null
   mcpc x402 info || true
 else
