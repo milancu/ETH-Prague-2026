@@ -10,7 +10,7 @@ AI consent rule (docs/constitution.md §5):
 from __future__ import annotations
 
 import secrets
-from typing import Any
+from typing import Any, cast
 
 from web3 import Web3
 
@@ -59,18 +59,15 @@ def _approve_calldata(
     client: Web3Client, token_address: str, spender: str, amount: int
 ) -> str:
     token = client.position_wrapper(token_address)
-    return client.w3.to_hex(
-        token.encode_abi("approve", args=[Web3.to_checksum_address(spender), amount])
-    )
+    checksum = Web3.to_checksum_address(spender)
+    return cast(str, token.encode_abi("approve", args=[checksum, amount]))
 
 
 def _tab_approve_tx(
     client: Web3Client, spender: str, amount: int, summary: str
 ) -> dict[str, Any]:
-    data = client.w3.to_hex(
-        client.tab.encode_abi(
-            "approve", args=[Web3.to_checksum_address(spender), amount]
-        )
+    data: str = client.tab.encode_abi(
+        "approve", args=[Web3.to_checksum_address(spender), amount]
     )
     return _tx(to=client.tab.address, data=data, summary=summary)
 
@@ -125,11 +122,9 @@ def prepare_buy(
                 order_obj.market_id or market_id,
             )
             sig_bytes = bytes.fromhex(order_obj.signature.removeprefix("0x"))
-            fill_data = client.w3.to_hex(
-                client.tab_clob.encode_abi(
-                    "fill",
-                    args=[order_tuple, fill_maker_amount, sig_bytes],
-                )
+            fill_data: str = client.tab_clob.encode_abi(
+                "fill",
+                args=[order_tuple, fill_maker_amount, sig_bytes],
             )
 
             # TAB cost for this fill (ceiling)
@@ -161,11 +156,9 @@ def prepare_buy(
 
     # ---- Fallback: splitAndWrap ----
     # wrapIndexSets = [index_set] — wrap only the requested outcome
-    split_data = client.w3.to_hex(
-        client.pmv2.encode_abi(
-            "splitAndWrap",
-            args=[market_id, amount_tab, [index_set]],
-        )
+    split_data: str = client.pmv2.encode_abi(
+        "splitAndWrap",
+        args=[market_id, amount_tab, [index_set]],
     )
     human_tab = amount_tab / 10**18
     requires = [
@@ -178,16 +171,16 @@ def prepare_buy(
     ]
     notice = (
         "No liquidity found on the order book — minting positions from collateral. "
-        f"You will receive {human_tab:.4f} {label} tokens "
-        f"plus {human_tab:.4f} NO tokens."
+        f"You will receive {human_tab:.4f} wrapped {label} tokens "
+        "plus the complementary position(s) as ERC-1155."
     )
     return _tx_card(
         to=client.pmv2.address,
         data=split_data,
         chain_id=chain_id,
         summary=(
-            f"Mint {human_tab:.4f} {label}+NO positions in market "
-            f"#{market_id} (no CLOB liquidity)"
+            f"Mint {human_tab:.4f} {label} position in market "
+            f"#{market_id} (no CLOB liquidity — splitAndWrap)"
         ),
         requires=requires,
         value="0",
@@ -272,11 +265,9 @@ def prepare_sell(
 
     # Approval: maker must approve TabClob to transfer their wPosition tokens
     wrapper_contract = client.position_wrapper(wrapper_addr)
-    approval_data = client.w3.to_hex(
-        wrapper_contract.encode_abi(
-            "approve",
-            args=[Web3.to_checksum_address(client.tab_clob.address), maker_amount],
-        )
+    approval_data: str = wrapper_contract.encode_abi(
+        "approve",
+        args=[Web3.to_checksum_address(client.tab_clob.address), maker_amount],
     )
 
     human_maker = maker_amount / 10**18
@@ -327,7 +318,7 @@ def prepare_create_market(
     resolution_time: int,
     chain_id: int,
 ) -> dict[str, Any]:
-    """Build createMarket calldata.  Requires prior TAB.approve(PMv2, defaultBond)."""
+    """Build createMarket calldata. Requires prior TAB.approve(PMv2, defaultBond)."""
     default_bond: int = client.pmv2.functions.defaultBond().call()
 
     params_tuple = (
@@ -341,9 +332,7 @@ def prepare_create_market(
         expires_at,
         resolution_time,
     )
-    create_data = client.w3.to_hex(
-        client.pmv2.encode_abi("createMarket", args=[params_tuple])
-    )
+    create_data: str = client.pmv2.encode_abi("createMarket", args=[params_tuple])
 
     human_bond = default_bond / 10**18
     requires = [
@@ -374,15 +363,13 @@ def prepare_claim(
     index_sets: list[int],
     chain_id: int,
 ) -> dict[str, Any]:
-    """Build claimWinnings calldata.  Requires ct.setApprovalForAll(PMv2, true)."""
-    claim_data = client.w3.to_hex(
-        client.pmv2.encode_abi("claimWinnings", args=[market_id, index_sets])
+    """Build claimWinnings calldata. Requires ct.setApprovalForAll(PMv2, true)."""
+    claim_data: str = client.pmv2.encode_abi(
+        "claimWinnings", args=[market_id, index_sets]
     )
-    set_approval_data = client.w3.to_hex(
-        client.ct.encode_abi(
-            "setApprovalForAll",
-            args=[Web3.to_checksum_address(client.pmv2.address), True],
-        )
+    set_approval_data: str = client.ct.encode_abi(
+        "setApprovalForAll",
+        args=[Web3.to_checksum_address(client.pmv2.address), True],
     )
     requires = [
         _tx(
@@ -413,14 +400,12 @@ def prepare_merge(
     chain_id: int,
 ) -> dict[str, Any]:
     """Build mergeFrom calldata (recover TAB by burning a full position set)."""
-    merge_data = client.w3.to_hex(
-        client.pmv2.encode_abi("mergeFrom", args=[market_id, partition, amount])
+    merge_data: str = client.pmv2.encode_abi(
+        "mergeFrom", args=[market_id, partition, amount]
     )
-    set_approval_data = client.w3.to_hex(
-        client.ct.encode_abi(
-            "setApprovalForAll",
-            args=[Web3.to_checksum_address(client.pmv2.address), True],
-        )
+    set_approval_data: str = client.ct.encode_abi(
+        "setApprovalForAll",
+        args=[Web3.to_checksum_address(client.pmv2.address), True],
     )
     human_amount = amount / 10**18
     requires = [
@@ -464,9 +449,7 @@ def prepare_cancel_order(
         int(order.salt),
         order.market_id or 0,
     )
-    cancel_data = client.w3.to_hex(
-        client.tab_clob.encode_abi("cancel", args=[order_tuple])
-    )
+    cancel_data: str = client.tab_clob.encode_abi("cancel", args=[order_tuple])
     return _tx_card(
         to=client.tab_clob.address,
         data=cancel_data,

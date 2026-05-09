@@ -29,7 +29,7 @@ from web3.contract import Contract
 
 _ARTIFACTS_ROOT = (
     Path(__file__).parent.parent.parent.parent.parent.parent
-    / "contracts/packages/hardhat/artifacts/contracts"
+    / "apps/contracts/packages/hardhat/artifacts/contracts"
 )
 
 
