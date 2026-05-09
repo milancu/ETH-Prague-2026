@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { Link } from "@tanstack/react-router"
+import { useNavigate } from "@tanstack/react-router"
 import { parseEther } from "viem"
 import { cn } from "@workspace/ui/lib/utils"
 import { useMarketPrices } from "@/features/market/hooks/use-market-prices"
@@ -298,6 +298,7 @@ interface MarketCardProps {
 }
 
 export function MarketCard({ market, index }: MarketCardProps) {
+  const navigate = useNavigate()
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null)
   const [betAmount, setBetAmount] = useState("")
   const { placeOrder, isPending } = usePlaceOrder()
@@ -328,10 +329,13 @@ export function MarketCard({ market, index }: MarketCardProps) {
   async function handlePlaceOrder() {
     if (selectedOutcome === null || !betAmount) return
     try {
+      // quick-bet from card uses 50 cents as default limit price
       await placeOrder({
         market,
         outcomeId: selectedOutcome,
-        tabAmountWei: parseEther(betAmount),
+        side: "buy",
+        quantityWei: parseEther(betAmount),
+        priceWei: parseEther("0.5"),
       })
       setBetAmount("")
       setSelectedOutcome(null)
@@ -342,13 +346,14 @@ export function MarketCard({ market, index }: MarketCardProps) {
 
   return (
     <Card
+      onClick={() => navigate({ to: "/markets/$marketId", params: { marketId: market.id } })}
       className={cn(
-        "border-t-2",
+        "cursor-pointer border-t-2",
         cat.accent,
         "transition-[box-shadow,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
         "[@media(hover:hover)_and_(pointer:fine)]:hover:ring-foreground/20",
         "[@media(hover:hover)_and_(pointer:fine)]:motion-safe:hover:-translate-y-0.5",
-        "motion-safe:[&:active:not(:has(:active))]:scale-[0.98]",
+        "motion-safe:[&:active:not(:has(:active))]:scale-[0.97]",
         "motion-safe:[&:active:not(:has(:active))]:translate-y-0",
         "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-[97%]",
         "motion-safe:slide-in-from-bottom-3 motion-safe:duration-250 motion-safe:fill-mode-both",
@@ -373,45 +378,44 @@ export function MarketCard({ market, index }: MarketCardProps) {
       </CardHeader>
 
       <CardContent className="flex flex-col gap-4">
-        <Link
-          to="/markets/$marketId"
-          params={{ marketId: market.id }}
-          className="text-sm font-medium leading-snug text-foreground text-pretty hover:underline underline-offset-2"
-        >
+        <p className="text-sm font-medium leading-snug text-foreground text-pretty">
           {market.title}
-        </Link>
+        </p>
 
-        {liveMarket.outcomeType === "binary" && (
-          <BinarySection
-            market={liveMarket}
-            selected={selectedOutcome}
-            onSelect={setSelectedOutcome}
-          />
-        )}
-        {liveMarket.outcomeType === "multi" && (
-          <MultiSection
-            market={liveMarket}
-            cat={cat}
-            selected={selectedOutcome}
-            onSelect={setSelectedOutcome}
-          />
-        )}
-        {liveMarket.outcomeType === "scalar" && (
-          <ScalarSection
-            market={liveMarket}
-            selected={selectedOutcome}
-            onSelect={setSelectedOutcome}
-          />
-        )}
+        {/* stopPropagation so clicks on interactive elements don't bubble to the card */}
+        <div onClick={(e) => e.stopPropagation()} className="flex flex-col gap-4 pb-2">
+          {liveMarket.outcomeType === "binary" && (
+            <BinarySection
+              market={liveMarket}
+              selected={selectedOutcome}
+              onSelect={setSelectedOutcome}
+            />
+          )}
+          {liveMarket.outcomeType === "multi" && (
+            <MultiSection
+              market={liveMarket}
+              cat={cat}
+              selected={selectedOutcome}
+              onSelect={setSelectedOutcome}
+            />
+          )}
+          {liveMarket.outcomeType === "scalar" && (
+            <ScalarSection
+              market={liveMarket}
+              selected={selectedOutcome}
+              onSelect={setSelectedOutcome}
+            />
+          )}
 
-        {showBetForm ? (
-          <BetForm
-            amount={betAmount}
-            onAmountChange={setBetAmount}
-            onSubmit={handlePlaceOrder}
-            isPending={isPending}
-          />
-        ) : null}
+          {showBetForm && (
+            <BetForm
+              amount={betAmount}
+              onAmountChange={setBetAmount}
+              onSubmit={handlePlaceOrder}
+              isPending={isPending}
+            />
+          )}
+        </div>
       </CardContent>
 
       <CardFooter className="justify-end">

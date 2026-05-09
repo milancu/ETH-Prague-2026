@@ -1,206 +1,25 @@
-import { useState, useMemo } from "react"
+import { useMemo } from "react"
 import { Link } from "@tanstack/react-router"
-import { ArrowLeft, Calendar, ExternalLink, Copy } from "lucide-react"
-import { parseEther } from "viem"
+import { ArrowLeft, Calendar, Copy } from "lucide-react"
+import { motion } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
-import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
-import { Input } from "@workspace/ui/components/input"
-import {
-  Progress,
-  ProgressIndicator,
-  ProgressTrack,
-} from "@/components/animate-ui/primitives/base/progress"
 import { useMarket } from "@/features/market/hooks/use-market"
 import { useMarketPrices } from "@/features/market/hooks/use-market-prices"
-import { formatVolume, formatDate, marketStatusLabel } from "@/features/market/lib/utils"
-import type { BinaryMarket, Market, MarketCategory, MultiMarket, ScalarMarket } from "@/features/market/types"
+import { formatDate, marketStatusLabel } from "@/features/market/lib/utils"
+import type { Market, MarketCategory } from "@/features/market/types"
 import { OrderBook } from "@/features/orders/components/order-book"
-import { usePlaceOrder } from "@/features/orders/hooks/use-place-order"
+import { TradingPanel } from "@/features/market/components/trading-panel"
+import { ResolutionBar } from "@/features/market/components/resolution-bar"
 
 // ── Static config ─────────────────────────────────────────────────────────────
 
-const CATEGORY_CONFIG: Record<MarketCategory, { badge: string; accent: string; bar: string; border: string }> = {
-  Finance:  { badge: "bg-amber-500/10 text-amber-400",    accent: "text-amber-400",   bar: "bg-amber-500/70",   border: "border-amber-500/20"   },
-  Politics: { badge: "bg-blue-500/10 text-blue-400",      accent: "text-blue-400",    bar: "bg-blue-500/70",    border: "border-blue-500/20"    },
-  Sport:    { badge: "bg-emerald-500/10 text-emerald-400", accent: "text-emerald-400", bar: "bg-emerald-500/70", border: "border-emerald-500/20" },
-  Czech:    { badge: "bg-purple-500/10 text-purple-400",  accent: "text-purple-400",  bar: "bg-purple-500/70",  border: "border-purple-500/20"  },
-  Weather:  { badge: "bg-cyan-500/10 text-cyan-400",      accent: "text-cyan-400",    bar: "bg-cyan-500/70",    border: "border-cyan-500/20"    },
-}
-
-// ── Binary ────────────────────────────────────────────────────────────────────
-
-function BinaryPanel({ market, selected, onSelect }: {
-  market: BinaryMarket
-  selected: string | null
-  onSelect: (v: string | null) => void
-}) {
-  const sides = [
-    { id: "yes", label: "YES", price: market.yesPrice, activeBg: "bg-emerald-500/10", ring: "ring-emerald-500/30", bar: "bg-emerald-500", text: "text-emerald-400" },
-    { id: "no",  label: "NO",  price: market.noPrice,  activeBg: "bg-rose-500/10",    ring: "ring-rose-500/30",    bar: "bg-rose-500",    text: "text-rose-400"    },
-  ] as const
-
-  return (
-    <div className="flex flex-col gap-2">
-      {sides.map(({ id, label, price, activeBg, ring, bar, text }) => {
-        const active = selected === id
-        return (
-          <button
-            key={id}
-            aria-pressed={active}
-            onClick={() => onSelect(active ? null : id)}
-            className={cn(
-              "flex items-center gap-4 px-4 py-3",
-              "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
-              active ? cn(activeBg, "ring-1", ring) : "bg-muted hover:bg-muted/60",
-            )}
-          >
-            <span className={cn("w-8 shrink-0 text-sm font-bold tracking-widest", text)}>{label}</span>
-            <Progress value={price} className="flex-1">
-              <ProgressTrack className="h-1.5 w-full overflow-hidden bg-white/8">
-                <ProgressIndicator className={cn("h-full", bar)} />
-              </ProgressTrack>
-            </Progress>
-            <span className={cn("w-12 shrink-0 text-right text-sm font-bold tabular-nums", text)}>{price}%</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Multi ─────────────────────────────────────────────────────────────────────
-
-function MultiPanel({ market, cat, selected, onSelect }: {
-  market: MultiMarket
-  cat: (typeof CATEGORY_CONFIG)[MarketCategory]
-  selected: string | null
-  onSelect: (v: string | null) => void
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      {market.outcomes.map((outcome) => {
-        const active = selected === outcome.id
-        return (
-          <button
-            key={outcome.id}
-            aria-pressed={active}
-            onClick={() => onSelect(active ? null : outcome.id)}
-            className={cn(
-              "flex items-center gap-4 px-4 py-3",
-              "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
-              active ? "bg-primary/10 ring-1 ring-primary/30" : "bg-muted hover:bg-muted/60",
-            )}
-          >
-            <Progress value={outcome.price} className="flex-1">
-              <ProgressTrack className="h-1.5 w-full overflow-hidden bg-white/8">
-                <ProgressIndicator className={cn("h-full", cat.bar)} />
-              </ProgressTrack>
-            </Progress>
-            <span className="shrink-0 text-sm font-medium text-foreground">{outcome.label}</span>
-            <span className="w-12 shrink-0 text-right text-sm font-semibold tabular-nums text-muted-foreground">{outcome.price}%</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
-
-// ── Scalar ────────────────────────────────────────────────────────────────────
-
-function ScalarPanel({ market, selected, onSelect }: {
-  market: ScalarMarket
-  selected: string | null
-  onSelect: (v: string | null) => void
-}) {
-  const range = market.scalarMax - market.scalarMin
-  const pct = range === 0 ? 0 : ((market.currentValue - market.scalarMin) / range) * 100
-
-  const sides = [
-    { id: "higher", label: "HIGHER", hint: `> ${formatVolume(market.currentValue)} ${market.scalarUnit}`, activeBg: "bg-emerald-500/10", ring: "ring-emerald-500/30", text: "text-emerald-400" },
-    { id: "lower",  label: "LOWER",  hint: `< ${formatVolume(market.currentValue)} ${market.scalarUnit}`, activeBg: "bg-rose-500/10",    ring: "ring-rose-500/30",    text: "text-rose-400"    },
-  ] as const
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between text-xs">
-          <span className="text-muted-foreground uppercase tracking-widest">Market Consensus</span>
-          <span className="font-semibold tabular-nums text-foreground">{formatVolume(market.currentValue)} {market.scalarUnit}</span>
-        </div>
-        <Progress value={pct}>
-          <ProgressTrack className="h-2 w-full overflow-hidden bg-white/8">
-            <ProgressIndicator className="h-full bg-primary/70" />
-          </ProgressTrack>
-        </Progress>
-        <div className="flex justify-between text-[10px] tabular-nums text-muted-foreground">
-          <span>{formatVolume(market.scalarMin)} {market.scalarUnit}</span>
-          <span>{formatVolume(market.scalarMax)} {market.scalarUnit}</span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-2">
-        {sides.map(({ id, label, hint, activeBg, ring, text }) => {
-          const active = selected === id
-          return (
-            <button
-              key={id}
-              aria-pressed={active}
-              onClick={() => onSelect(active ? null : id)}
-              className={cn(
-                "flex items-center justify-between px-4 py-3",
-                "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
-                active ? cn(activeBg, "ring-1", ring) : "bg-muted hover:bg-muted/60",
-              )}
-            >
-              <span className={cn("text-sm font-bold tracking-widest", text)}>{label}</span>
-              <span className="text-xs tabular-nums text-muted-foreground">{hint}</span>
-            </button>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
-// ── Bet form ──────────────────────────────────────────────────────────────────
-
-function BetForm({
-  amount,
-  onChange,
-  onSubmit,
-  isPending,
-}: {
-  amount: string
-  onChange: (v: string) => void
-  onSubmit: () => void
-  isPending: boolean
-}) {
-  return (
-    <div className="flex gap-2 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150">
-      <div className="relative flex-1">
-        <Input
-          type="number"
-          value={amount}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="0…"
-          min="0"
-          aria-label="Bet amount in TAB"
-          className="pr-12"
-          disabled={isPending}
-        />
-        <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
-          TAB
-        </span>
-      </div>
-      <Button
-        onClick={onSubmit}
-        disabled={Number(amount) <= 0 || isPending}
-        className="shrink-0 px-6"
-      >
-        {isPending ? "Placing…" : "Place Order"}
-      </Button>
-    </div>
-  )
+const CATEGORY_CONFIG: Record<MarketCategory, { badge: string; border: string }> = {
+  Finance:  { badge: "bg-amber-500/10 text-amber-400",    border: "border-amber-500/20"   },
+  Politics: { badge: "bg-blue-500/10 text-blue-400",      border: "border-blue-500/20"    },
+  Sport:    { badge: "bg-emerald-500/10 text-emerald-400", border: "border-emerald-500/20" },
+  Czech:    { badge: "bg-purple-500/10 text-purple-400",  border: "border-purple-500/20"  },
+  Weather:  { badge: "bg-cyan-500/10 text-cyan-400",      border: "border-cyan-500/20"    },
 }
 
 // ── Meta row ──────────────────────────────────────────────────────────────────
@@ -238,19 +57,6 @@ function MetaRow({ label, value, mono = false, truncate = false }: {
   )
 }
 
-// ── Outcome panel switcher ────────────────────────────────────────────────────
-
-function OutcomePanel({ market, cat, selected, onSelect }: {
-  market: Market
-  cat: (typeof CATEGORY_CONFIG)[MarketCategory]
-  selected: string | null
-  onSelect: (v: string | null) => void
-}) {
-  if (market.outcomeType === "binary") return <BinaryPanel market={market} selected={selected} onSelect={onSelect} />
-  if (market.outcomeType === "multi")  return <MultiPanel  market={market} cat={cat} selected={selected} onSelect={onSelect} />
-  return <ScalarPanel market={market} selected={selected} onSelect={onSelect} />
-}
-
 // ── Skeleton ──────────────────────────────────────────────────────────────────
 
 function DetailSkeleton() {
@@ -273,9 +79,6 @@ function DetailSkeleton() {
 
 export function MarketDetail({ id }: { id: string }) {
   const { data: market, isLoading, isError } = useMarket(id)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [amount, setAmount] = useState("")
-  const { placeOrder, isPending } = usePlaceOrder()
   const livePrices = useMarketPrices(market)
 
   const liveMarket = useMemo((): Market | undefined => {
@@ -296,21 +99,6 @@ export function MarketDetail({ id }: { id: string }) {
     return market
   }, [market, livePrices])
 
-  async function handlePlaceOrder() {
-    if (!market || selected === null || !amount) return
-    try {
-      await placeOrder({
-        market,
-        outcomeId: selected,
-        tabAmountWei: parseEther(amount),
-      })
-      setAmount("")
-      setSelected(null)
-    } catch {
-      // toast already shown by usePlaceOrder
-    }
-  }
-
   if (isLoading) return <DetailSkeleton />
 
   if (isError || !market) {
@@ -329,13 +117,25 @@ export function MarketDetail({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-8">
-      {/* Back */}
+      {/* Back — breadcrumb nav; "Markets" layoutId matches the list-page h1 */}
       <Link
         to="/"
-        className="flex w-fit items-center gap-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+        className="flex w-fit items-center gap-2 text-muted-foreground transition-colors duration-150 hover:text-foreground"
       >
-        <ArrowLeft className="size-3.5" />
-        Markets
+        <motion.span
+          initial={{ opacity: 0, x: -6 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+        >
+          <ArrowLeft className="size-5" />
+        </motion.span>
+        <motion.span
+          layoutId="markets-label"
+          className="inline-block text-2xl font-semibold tracking-tight"
+          transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+        >
+          Markets
+        </motion.span>
       </Link>
 
       {/* Title row */}
@@ -402,31 +202,14 @@ export function MarketDetail({ id }: { id: string }) {
           {/* Order book */}
           <section className="flex flex-col gap-2">
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Order Book</h2>
-            <OrderBook marketId={market.marketId} />
+            <OrderBook market={liveMarket ?? market} />
           </section>
         </div>
 
-        {/* Right — betting panel */}
+        {/* Right — trading panel */}
         <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:self-start">
-          <div className={cn("border border-border p-4 flex flex-col gap-4", cat.border, "border-t-2")}>
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Place a bet
-            </h2>
-            <OutcomePanel market={liveMarket ?? market} cat={cat} selected={selected} onSelect={setSelected} />
-            {selected !== null && (
-              <BetForm
-                amount={amount}
-                onChange={setAmount}
-                onSubmit={handlePlaceOrder}
-                isPending={isPending}
-              />
-            )}
-          </div>
-
-          <div className="border border-border px-4 py-3 flex items-start gap-2 text-[11px] text-muted-foreground">
-            <ExternalLink className="mt-px size-3.5 shrink-0" aria-hidden />
-            <span>Bond: <span className="font-semibold text-foreground">50 TAB</span> locked until resolution.</span>
-          </div>
+          <TradingPanel market={liveMarket ?? market} />
+          <ResolutionBar market={liveMarket ?? market} />
         </div>
       </div>
     </div>

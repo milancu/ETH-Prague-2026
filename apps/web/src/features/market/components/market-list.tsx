@@ -4,6 +4,7 @@ import type { MarketCategory } from "@/features/market/types"
 import { useMarkets } from "@/features/market/hooks/use-markets"
 import { MarketCard } from "@/features/market/components/market-card.tsx"
 import { CreateMarketDialog } from "@/features/market/components/create-market-dialog"
+import { motion } from "motion/react"
 
 type FilterCategory = "All" | MarketCategory
 
@@ -25,7 +26,13 @@ export function MarketList() {
     <div className="flex flex-col gap-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-semibold tracking-tight">Markets</h1>
+          <motion.h1
+            layoutId="markets-label"
+            className="w-fit text-2xl font-semibold tracking-tight"
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          >
+            Markets
+          </motion.h1>
           <p className="text-sm text-muted-foreground">
             {isLoading
               ? "Loading…"

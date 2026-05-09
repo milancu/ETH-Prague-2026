@@ -31,6 +31,7 @@ import {
   MARKET_CATEGORIES,
 } from "@/features/market/lib/schema";
 import { useCreateMarket } from "@/features/market/hooks/use-create-market";
+import { ScrollArea } from "@workspace/ui/components/scroll-area.tsx"
 
 // ── Field helpers ────────────────────────────────────────────────────────────
 
@@ -128,7 +129,7 @@ export function CreateMarketDialog({ trigger }: CreateMarketDialogProps) {
 
       <DialogPopup className="sm:max-w-xl" showCloseButton>
         {/* Scrollable area: header + form fields */}
-        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
+        <ScrollArea className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">
           <DialogHeader>
             <DialogTitle>Create Market</DialogTitle>
             <DialogDescription>
@@ -378,7 +379,7 @@ export function CreateMarketDialog({ trigger }: CreateMarketDialogProps) {
               </span>
             </div>
           </form>
-        </div>
+        </ScrollArea>
 
         {/* Sticky footer — always at bottom, content above scrolls */}
         <DialogFooter className="border-border shrink-0 border-t p-4">

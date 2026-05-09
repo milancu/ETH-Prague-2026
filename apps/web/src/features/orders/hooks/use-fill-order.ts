@@ -25,95 +25,96 @@ export function useFillOrder() {
   const queryClient = useQueryClient()
   const [isPending, setIsPending] = useState(false)
 
-  async function fillOrder(order: Order) {
+  // partialMakerAmount: how much of the maker's token to consume (omit = full fill)
+  async function fillOrder(order: Order, partialMakerAmount?: bigint) {
     if (!address || !publicClient) throw new Error("Not connected")
     if (!order.marketId) throw new Error("Order has no marketId")
 
     setIsPending(true)
     try {
       const isBuy = order.makerToken.toLowerCase() === TAB
-      const fillMakerAmount = BigInt(order.makerAmount)
-      const fillTakerAmount = BigInt(order.takerAmount)
+      const fillMaker = partialMakerAmount ?? BigInt(order.makerAmount)
+      // Proportional taker amount (bigint truncation is acceptable for CLOB fills)
+      const fillTaker = partialMakerAmount
+        ? (BigInt(order.takerAmount) * fillMaker / BigInt(order.makerAmount))
+        : BigInt(order.takerAmount)
 
       if (isBuy) {
-        // Taker is selling outcome tokens → needs to split TABcoin first.
-        // Read the indexSet of the outcome wrapper (takerToken of the BUY order).
-        const indexSet = await publicClient.readContract({
+        // Filling a BUY order: taker must deliver takerToken (outcome wrapper ERC-20)
+        // Check existing balance — skip split+wrap if already sufficient
+        const erc20Bal = await publicClient.readContract({
           address: order.takerToken as `0x${string}`,
-          abi: POSITION_WRAPPER_ABI,
-          functionName: "indexSet",
+          abi: ERC20_ABI,
+          functionName: "balanceOf",
+          args: [address],
         })
 
-        // Approve TABcoin → PredictionMarketV2 for the split
-        const tabAllowancePM = await publicClient.readContract({
-          address: TABCOIN_ADDRESS,
-          abi: ERC20_ABI,
-          functionName: "allowance",
-          args: [address, PREDICTION_MARKET_ADDRESS],
-        })
-        if (tabAllowancePM < fillTakerAmount) {
-          toast.loading("Approving TAB for split…", { id: TOAST_ID })
-          const tx = await writeContractAsync({
-            address: TABCOIN_ADDRESS,
-            abi: ERC20_ABI,
-            functionName: "approve",
-            args: [PREDICTION_MARKET_ADDRESS, maxUint256],
-            gas: 100_000n,
+        if (erc20Bal < fillTaker) {
+          const deficit = fillTaker - erc20Bal
+          const indexSet = await publicClient.readContract({
+            address: order.takerToken as `0x${string}`,
+            abi: POSITION_WRAPPER_ABI,
+            functionName: "indexSet",
           })
-          await publicClient.waitForTransactionReceipt({ hash: tx })
+
+          const tabAllowancePM = await publicClient.readContract({
+            address: TABCOIN_ADDRESS, abi: ERC20_ABI,
+            functionName: "allowance", args: [address, PREDICTION_MARKET_ADDRESS],
+          })
+          if (tabAllowancePM < deficit) {
+            toast.loading("Approving TAB for split…", { id: TOAST_ID })
+            const tx = await writeContractAsync({
+              address: TABCOIN_ADDRESS, abi: ERC20_ABI,
+              functionName: "approve", args: [PREDICTION_MARKET_ADDRESS, maxUint256],
+              gas: 100_000n,
+            })
+            await publicClient.waitForTransactionReceipt({ hash: tx })
+          }
+
+          toast.loading("Splitting position…", { id: TOAST_ID })
+          const splitTx = await writeContractAsync({
+            address: PREDICTION_MARKET_ADDRESS, abi: PREDICTION_MARKET_ABI,
+            functionName: "splitAndWrap",
+            args: [BigInt(order.marketId), deficit, [indexSet]],
+            gas: 500_000n,
+          })
+          await publicClient.waitForTransactionReceipt({ hash: splitTx })
         }
 
-        // splitAndWrap: deposit fillTakerAmount TABcoin, receive outcome wrapper ERC-20
-        toast.loading("Splitting position…", { id: TOAST_ID })
-        const splitTx = await writeContractAsync({
-          address: PREDICTION_MARKET_ADDRESS,
-          abi: PREDICTION_MARKET_ABI,
-          functionName: "splitAndWrap",
-          args: [BigInt(order.marketId), fillTakerAmount, [indexSet]],
-          gas: 500_000n,
-        })
-        await publicClient.waitForTransactionReceipt({ hash: splitTx })
-
-        // Approve outcome wrapper → TabClob
+        // Approve outcome wrapper for CLOB
         const wrapperAllowance = await publicClient.readContract({
           address: order.takerToken as `0x${string}`,
           abi: ERC20_ABI,
           functionName: "allowance",
           args: [address, TABCLOB_ADDRESS],
         })
-        if (wrapperAllowance < fillTakerAmount) {
+        if (wrapperAllowance < fillTaker) {
           toast.loading("Approving outcome tokens…", { id: TOAST_ID })
           const tx = await writeContractAsync({
-            address: order.takerToken as `0x${string}`,
-            abi: ERC20_ABI,
-            functionName: "approve",
-            args: [TABCLOB_ADDRESS, maxUint256],
+            address: order.takerToken as `0x${string}`, abi: ERC20_ABI,
+            functionName: "approve", args: [TABCLOB_ADDRESS, maxUint256],
             gas: 100_000n,
           })
           await publicClient.waitForTransactionReceipt({ hash: tx })
         }
       } else {
-        // Taker is buying outcome tokens with TABcoin — just approve TABcoin
+        // Filling a SELL order: taker provides TABcoin
         const tabAllowanceCLOB = await publicClient.readContract({
-          address: TABCOIN_ADDRESS,
-          abi: ERC20_ABI,
+          address: TABCOIN_ADDRESS, abi: ERC20_ABI,
           functionName: "allowance",
           args: [address, TABCLOB_ADDRESS],
         })
-        if (tabAllowanceCLOB < fillTakerAmount) {
+        if (tabAllowanceCLOB < fillTaker) {
           toast.loading("Approving TAB…", { id: TOAST_ID })
           const tx = await writeContractAsync({
-            address: TABCOIN_ADDRESS,
-            abi: ERC20_ABI,
-            functionName: "approve",
-            args: [TABCLOB_ADDRESS, maxUint256],
+            address: TABCOIN_ADDRESS, abi: ERC20_ABI,
+            functionName: "approve", args: [TABCLOB_ADDRESS, maxUint256],
             gas: 100_000n,
           })
           await publicClient.waitForTransactionReceipt({ hash: tx })
         }
       }
 
-      // Fill on-chain
       toast.loading("Filling order…", { id: TOAST_ID })
       const fillTx = await writeContractAsync({
         address: TABCLOB_ADDRESS,
@@ -125,21 +126,23 @@ export function useFillOrder() {
             taker:       order.taker      as `0x${string}`,
             makerToken:  order.makerToken as `0x${string}`,
             takerToken:  order.takerToken as `0x${string}`,
-            makerAmount: fillMakerAmount,
-            takerAmount: fillTakerAmount,
+            makerAmount: BigInt(order.makerAmount),
+            takerAmount: BigInt(order.takerAmount),
             expiry:      BigInt(order.expiry),
             salt:        BigInt(order.salt),
             marketId:    BigInt(order.marketId),
           },
-          fillMakerAmount,
+          fillMaker,
           order.signature as `0x${string}`,
         ],
         gas: 500_000n,
       })
       await publicClient.waitForTransactionReceipt({ hash: fillTx })
 
-      // Remove from BE mempool
-      await deleteOrder(order.id)
+      // Only remove from BE mempool on full fill
+      const isFullFill = !partialMakerAmount || partialMakerAmount >= BigInt(order.makerAmount)
+      if (isFullFill) await deleteOrder(order.id)
+
       queryClient.invalidateQueries({ queryKey: ["orders"],    exact: false })
       queryClient.invalidateQueries({ queryKey: ["positions"], exact: false })
 

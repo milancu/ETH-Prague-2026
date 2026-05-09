@@ -138,3 +138,10 @@ export async function postMarket(payload: PostMarketPayload): Promise<{ id: numb
   const { data } = await apiClient.post<{ id: number }>("/markets", payload)
   return data
 }
+
+export async function patchMarketStatus(
+  marketId: number,
+  status: MarketStatus,
+): Promise<void> {
+  await apiClient.patch(`/markets/${marketId}`, { status })
+}

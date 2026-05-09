@@ -246,3 +246,25 @@ async def get_market(
             status_code=status.HTTP_404_NOT_FOUND, detail="market not found"
         )
     return market
+
+
+class MarketStatusUpdate(BaseModel):
+    status: MarketStatus
+
+
+@router.patch("/{market_id}", response_model=MarketRead)
+async def update_market_status(
+    market_id: int,
+    body: MarketStatusUpdate,
+    session: AsyncSession = Depends(get_session),
+) -> Market:
+    stmt = select(Market).where(Market.market_id == market_id)
+    market = (await session.execute(stmt)).scalar_one_or_none()
+    if market is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="market not found"
+        )
+    market.status = body.status
+    await session.commit()
+    await session.refresh(market)
+    return market

@@ -7,7 +7,14 @@
       "Bash(Select-Object Name, PSIsContainer)",
       "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\" -Recurse -Force | Where-Object { $_.Extension -eq \".py\" } | Select-Object FullName)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" | Where-Object { $_.Name -ne \".venv\" } | ForEach-Object { \"$\\($_.Name\\) \\($\\( if \\($_.PSIsContainer\\) { 'dir' } else { 'file' }\\)\\)\" })",
-      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\" -Depth 0 | Where-Object { $_.Name -notmatch \"^\\(\\\\.|node_modules\\)\" } | Select-Object Name)"
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\" -Depth 0 | Where-Object { $_.Name -notmatch \"^\\(\\\\.|node_modules\\)\" } | Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\\\\api\" -Recurse)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)"
     ]
-  }
+  },
+  "disabledMcpjsonServers": [
+    "shadcn"
+  ]
 }

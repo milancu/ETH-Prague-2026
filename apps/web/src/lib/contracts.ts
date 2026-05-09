@@ -76,6 +76,28 @@ export const PREDICTION_MARKET_ABI = [
     outputs: [{ name: "marketId", type: "uint256" }],
   },
   {
+    name: "splitTo",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",  type: "uint256"   },
+      { name: "partition", type: "uint256[]" },
+      { name: "amount",    type: "uint256"   },
+    ],
+    outputs: [],
+  },
+  {
+    name: "mergeFrom",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",  type: "uint256"   },
+      { name: "partition", type: "uint256[]" },
+      { name: "amount",    type: "uint256"   },
+    ],
+    outputs: [],
+  },
+  {
     name: "splitAndWrap",
     type: "function",
     stateMutability: "nonpayable",
@@ -83,6 +105,26 @@ export const PREDICTION_MARKET_ABI = [
       { name: "marketId",      type: "uint256"   },
       { name: "amount",        type: "uint256"   },
       { name: "wrapIndexSets", type: "uint256[]" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "claimWinnings",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",  type: "uint256"   },
+      { name: "indexSets", type: "uint256[]" },
+    ],
+    outputs: [],
+  },
+  {
+    name: "resolveMarket",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId", type: "uint256"   },
+      { name: "payouts",  type: "uint256[]" },
     ],
     outputs: [],
   },
@@ -111,6 +153,26 @@ export const CONDITIONAL_TOKENS_ABI = [
       { name: "id",      type: "uint256" },
     ],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "setApprovalForAll",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "operator", type: "address" },
+      { name: "approved", type: "bool"    },
+    ],
+    outputs: [],
+  },
+  {
+    name: "isApprovedForAll",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "account",  type: "address" },
+      { name: "operator", type: "address" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
   },
 ] as const
 
@@ -154,6 +216,20 @@ export const POSITION_WRAPPER_ABI = [
     stateMutability: "view",
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "wrap",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
+  },
+  {
+    name: "unwrap",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [{ name: "amount", type: "uint256" }],
+    outputs: [],
   },
 ] as const
 
