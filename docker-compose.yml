@@ -7,13 +7,30 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       # SQLite stored on a named volume so it survives container restarts.
       DATABASE_URL: sqlite+aiosqlite:////app/data/api.db
+      # Default chain for prepare/* and balance reads when chain_id is omitted.
+      CHAIN_ID: ${CHAIN_ID:-84532}
       # RPC URLs for tx_hash verification — falls back to public endpoints if unset.
       RPC_URL_84532: ${RPC_URL_84532:-https://sepolia.base.org}
       RPC_URL_31337: ${RPC_URL_31337:-http://127.0.0.1:8545}
+      # Eth Sepolia — the ENS resolver lives on L1, not Base.
+      RPC_URL_11155111: ${RPC_URL_11155111:-https://ethereum-sepolia-rpc.publicnode.com}
       # Hosts allowed to connect to the MCP transport (comma-separated).
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-api.kowalski-market.com,localhost,127.0.0.1}
       # Google Gemini API key — required by Kowalsky chat (llm/provider.py).
       GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
+      # ── ENS integration ───────────────────────────────────────────────────
+      ENS_RESOLVER_ADDRESS: ${ENS_RESOLVER_ADDRESS:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+      ENS_REGISTRAR_ADDRESS: ${ENS_REGISTRAR_ADDRESS:-0xC1FF759da5f4f33a63007b668c60074a2a71D56B}
+      ENS_REGISTRAR_DEPLOY_BLOCK: ${ENS_REGISTRAR_DEPLOY_BLOCK:-10822559}
+      ENS_BRIDGE_ENABLED: ${ENS_BRIDGE_ENABLED:-0}
+      ENS_BRIDGE_SIGNER_PK: ${ENS_BRIDGE_SIGNER_PK:-}
+      ENS_GATEWAY_SIGNER_PK: ${ENS_GATEWAY_SIGNER_PK:-}
+      ENS_GATEWAY_URL: ${ENS_GATEWAY_URL:-https://api.kowalski-market.com/v1/ens-gateway/{sender}/{data}.json}
+      # ── x402 ──────────────────────────────────────────────────────────────
+      # Outbound — also imported into mcpc on container start (see Dockerfile entrypoint).
+      X402_OUT_WALLET_PK: ${X402_OUT_WALLET_PK:?X402_OUT_WALLET_PK is required}
+      # Inbound — address agents pay for premium MCP tools.
+      X402_IN_WALLET_ADDRESS: ${X402_IN_WALLET_ADDRESS:?X402_IN_WALLET_ADDRESS is required}
     volumes:
       - api_data:/app/data
     ports:
