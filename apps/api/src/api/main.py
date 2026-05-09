@@ -11,6 +11,7 @@ from api.routes import comments, markets, orders
 from api.lib.x402_mcp import mcp_x402_middleware
 from api.lib.x402_server import get_middleware, is_paywall_enabled
 from api.mcp.server import mcp as mcp_server
+from api.routes.ens_discovery import router as ens_discovery_router
 from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes.intelligence import router as intelligence_router
 from api.routes.markets import balance_router
@@ -108,6 +109,7 @@ app.include_router(comments.router)
 app.include_router(prepare_router)
 app.include_router(intelligence_router)
 app.include_router(ens_gateway_router)
+app.include_router(ens_discovery_router)
 
 # Mount FastMCP at /mcp — streamable HTTP transport (modern MCP standard).
 # Clients connect to http://<host>/mcp.

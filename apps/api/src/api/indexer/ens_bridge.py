@@ -28,12 +28,13 @@ import asyncio
 import json
 import logging
 import os
-import re
 from pathlib import Path
 from typing import Any
 
 from eth_utils import keccak
 from web3 import Web3
+
+from api.lib.ens import slugify
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +58,6 @@ def _load_abi(sol_path: str, contract_name: str) -> list[dict[str, Any]]:
     path = _ARTIFACTS_ROOT / sol_path / f"{contract_name}.json"
     with open(path) as fh:
         return json.load(fh)["abi"]  # type: ignore[no-any-return]
-
-
-def _slugify(name: str) -> str:
-    """Convert a market title to a DNS-safe slug."""
-    slug = name.lower().strip()
-    slug = re.sub(r"[^a-z0-9\s-]", "", slug)
-    slug = re.sub(r"[\s_]+", "-", slug)
-    slug = re.sub(r"-+", "-", slug)
-    slug = slug.strip("-")
-    return slug[:63]  # DNS label max length
 
 
 class ENSBridge:
@@ -112,6 +103,8 @@ class ENSBridge:
             abi=resolver_abi,
         )
 
+        self._parent_node: bytes = self._registrar.functions.parentNode().call()
+
         self._last_block = 0
 
     async def run(self) -> None:
@@ -148,7 +141,7 @@ class ENSBridge:
             logger.info("MarketCreated: marketId=%d", market_id)
 
             market = self._pmv2.functions.getMarket(market_id).call()
-            slug = _slugify(market[5])  # market.name is at index 5 in the struct
+            slug = slugify(market[5])  # market.name is at index 5 in the struct
             if not slug:
                 slug = f"market-{market_id}"
 
@@ -187,6 +180,15 @@ class ENSBridge:
                 logger.info("Set ENS records for %s.kowalski.eth", slug)
             except Exception:
                 logger.exception("Failed to set records for market %d", market_id)
+
+            try:
+                self._update_markets_index(slug)
+            except Exception:
+                logger.exception(
+                    "Failed to update markets index for slug %r (market %d)",
+                    slug,
+                    market_id,
+                )
 
     async def _handle_market_resolved(self, from_block: int, to_block: int) -> None:
         events = self._pmv2.events.MarketResolved().get_logs(
@@ -245,6 +247,28 @@ class ENSBridge:
                 )
             except Exception:
                 logger.exception("Failed to update ENS for canceled market %d", market_id)
+
+    def _update_markets_index(self, new_slug: str) -> None:
+        """Append *new_slug* to the JSON array stored in text("markets") on the parent node."""
+        raw: str = self._resolver.functions.text(self._parent_node, "markets").call()
+        try:
+            slugs: list[str] = json.loads(raw) if raw else []
+        except json.JSONDecodeError:
+            logger.warning("text('markets') held non-JSON value %r — resetting", raw)
+            slugs = []
+
+        if new_slug in slugs:
+            return
+
+        slugs.append(new_slug)
+        self._send_tx(
+            self._resolver.functions.setText(
+                self._parent_node,
+                "markets",
+                json.dumps(slugs),
+            )
+        )
+        logger.info("markets index updated: %d slugs, added %r", len(slugs), new_slug)
 
     def _send_tx(self, fn: Any) -> Any:
         """Build, sign, and send a transaction on Ethereum Sepolia."""
