@@ -59,11 +59,14 @@ def _abi(name: str) -> list[dict[str, Any]]:
 # ---------------------------------------------------------------------------
 
 _HARDHAT_DEFAULTS: dict[str, str] = {
-    "tab": "0xf56DD038B0eC671AbEBAA6499fdd5b195Cf089e4",
-    "ct": "0x05fa1e1EE3249C26db881930F0bF2cb1fe05da98",
-    "pmv2": "0x1157c1D6027A5f4Cd62682A7F0d1da426A4b65E3",
-    "wrapper_factory": "0x1e79FAc6B154B49101252C447E0e68a0a20fc3c0",
-    "tab_clob": "0xb6Df8d192e0d8EFD03E248aeC59C37E55C5A9998",
+    # Deterministic CREATE addresses from Hardhat default account #0 starting
+    # at nonce 0. Match what `pnpm deploy` produces on a fresh non-forked node
+    # (BASE_FORK unset in hardhat.config.ts).
+    "tab": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+    "ct": "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512",
+    "pmv2": "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
+    "wrapper_factory": "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9",
+    "tab_clob": "0x0165878A594ca255338adfa4d48449f69242Eb8F",
 }
 
 _SEPOLIA_DEFAULTS: dict[str, str] = {

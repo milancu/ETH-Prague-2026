@@ -20,7 +20,8 @@ interface MarketDTO {
   title: string
   description: string | null
   rules: string | null
-  category: MarketCategory
+  // BE accepts free-form strings (chat path lets the LLM pick); normalised on read.
+  category: string
   outcome_type: OutcomeType
   outcomes: Array<{ label: string; [key: string]: unknown }>
   scalar_min: number | null
@@ -42,6 +43,29 @@ interface MarketsPageDTO {
 
 // ── Mapper ────────────────────────────────────────────────────────────────────
 
+// FE canonicalises `MarketCategory` to PascalCase (UI lookup tables key on it),
+// but the chat path lets the LLM pick any free-form string and the form path
+// pre-dates that contract. Normalise on read so old rows + loose values still
+// render instead of crashing on `CATEGORY_CONFIG[undefined].badge`.
+const CATEGORY_ALIASES: Record<string, MarketCategory> = {
+  politics: "Politics",
+  political: "Politics",
+  sport: "Sport",
+  sports: "Sport",
+  czech: "Czech",
+  finance: "Finance",
+  financial: "Finance",
+  crypto: "Finance",
+  weather: "Weather",
+  culture: "Czech",
+  economy: "Finance",
+  economics: "Finance",
+}
+
+function normalizeCategory(raw: string): MarketCategory {
+  return CATEGORY_ALIASES[raw.trim().toLowerCase()] ?? "Czech"
+}
+
 function dtoToMarket(dto: MarketDTO): Market {
   const base = {
     id: String(dto.market_id),
@@ -53,7 +77,7 @@ function dtoToMarket(dto: MarketDTO): Market {
     title: dto.title,
     description: dto.description,
     rules: dto.rules,
-    category: dto.category,
+    category: normalizeCategory(dto.category),
     closingDate: new Date(dto.expires_at),
     status: dto.status,
     createdAt: new Date(dto.created_at),

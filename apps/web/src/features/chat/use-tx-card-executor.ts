@@ -11,6 +11,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
 import type { Hex } from "viem"
 import { lookupAddress, lookupFunction } from "./address-book"
+import { runPostActions } from "./post-actions"
 import type { TxCard, TxStep } from "./schema"
 
 // ─── Validation ──────────────────────────────────────────────────────────────
@@ -173,32 +174,44 @@ export function useTxCardExecutor(card: TxCard): UseTxCardExecutorResult {
     // ── Balance check (best-effort: only TAB approves carry decoded amount).
     setState((s) => updateCheck(s, "balance", true))
 
-    // ── Simulate the main tx via publicClient.call (raw calldata path) ─────
-    try {
-      await publicClient.call({
-        account: address,
-        to: card.to as Hex,
-        data: card.data as Hex,
-        value: BigInt(card.value),
-      })
-      setState((s) => updateCheck(s, "simulate", true))
-    } catch (err) {
-      const reason = parseRevert(err)
-      setState((s) => ({
-        ...updateCheck(s, "simulate", reason),
-        phase: "failed",
-        error: reason,
-      }))
-      toast.error(`Simulation reverted: ${reason}`, { id: TOAST_ID })
-      return
-    }
-
-    // ── Run requires[] in order, then main ─────────────────────────────────
+    // ── Run requires[] in order, then main. Simulate each step right before
+    //    sending so the simulation sees the post-state of any prior requires
+    //    (e.g. the TAB allowance set by an earlier approve). A single upfront
+    //    simulation of the main tx would revert here because allowance is 0.
     const sequence: TxStep[] = [...card.requires, card]
+    let simulatePassed = false
+    let mainHash: Hex | undefined
+    let mainReceipt: Awaited<ReturnType<typeof publicClient.waitForTransactionReceipt>> | undefined
     for (let i = 0; i < sequence.length; i++) {
       const step = sequence[i]
+      const isMain = i === sequence.length - 1
       setState((s) => setStepStatus(s, i, { status: "active" }))
       toast.loading(step.summary, { id: TOAST_ID })
+
+      try {
+        await publicClient.call({
+          account: address,
+          to: step.to as Hex,
+          data: step.data as Hex,
+          value: BigInt(step.value),
+        })
+      } catch (err) {
+        const reason = parseRevert(err)
+        setState((s) => ({
+          ...updateCheck(s, "simulate", reason),
+          ...setStepStatus(s, i, { status: "failed", error: reason }),
+          phase: "failed",
+          error: reason,
+        }))
+        toast.error(`Simulation reverted: ${reason}`, { id: TOAST_ID })
+        return
+      }
+
+      if (!simulatePassed) {
+        simulatePassed = true
+        setState((s) => updateCheck(s, "simulate", true))
+      }
+
       try {
         const hash = await sendTransactionAsync({
           to: step.to as Hex,
@@ -206,8 +219,12 @@ export function useTxCardExecutor(card: TxCard): UseTxCardExecutorResult {
           value: BigInt(step.value),
         })
         setState((s) => setStepStatus(s, i, { status: "active", txHash: hash }))
-        await publicClient.waitForTransactionReceipt({ hash })
+        const receipt = await publicClient.waitForTransactionReceipt({ hash })
         setState((s) => setStepStatus(s, i, { status: "done", txHash: hash }))
+        if (isMain) {
+          mainHash = hash
+          mainReceipt = receipt
+        }
       } catch (err) {
         const reason = parseRevert(err)
         setState((s) => ({
@@ -224,6 +241,22 @@ export function useTxCardExecutor(card: TxCard): UseTxCardExecutorResult {
 
     setState((s) => ({ ...s, phase: "done" }))
     toast.success(card.summary, { id: TOAST_ID })
+
+    if (mainReceipt && mainHash) {
+      try {
+        await runPostActions({
+          card,
+          receipt: mainReceipt,
+          txHash: mainHash,
+          creator: address,
+        })
+      } catch (err) {
+        // BE sync is best-effort — the on-chain state is authoritative.
+        const reason = parseRevert(err)
+        toast.warning(`Saved on-chain, but BE sync failed: ${reason}`)
+      }
+    }
+
     queryClient.invalidateQueries()
   }, [
     address,

@@ -52,11 +52,14 @@ const config: HardhatUserConfig = {
     // If the network you are looking for is not here you can add new network settings
     hardhat: {
       chainId: 31337,
-      // Always fork Base mainnet so the local node mirrors real Base state
-      // (0x ExchangeProxy, WETH, etc.). chainId pinned to 31337 for SE-2 compat.
+      // Forking Base mainnet is opt-in via BASE_FORK=true. When enabled, the
+      // default Hardhat key (0xf39F…2266) inherits its real on-chain nonce
+      // (~42k tx), so contracts will NOT deploy at the deterministic CREATE
+      // addresses baked into BE web3_client._HARDHAT_DEFAULTS. Keep off for
+      // local dev unless you need 0x ExchangeProxy / WETH / etc.
       forking: {
         url: process.env.BASE_FORK_URL || `https://base-mainnet.g.alchemy.com/v2/${providerApiKey}`,
-        enabled: true,
+        enabled: process.env.BASE_FORK === "true",
       },
     },
     mainnet: {

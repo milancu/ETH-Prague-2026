@@ -27,12 +27,57 @@ const PORT = 8545;
 // Hardhat deterministically deploys to these from a fresh node
 // (deployer nonce 0–4). If any is empty we deem the chain "broken".
 const EXPECTED_CONTRACTS = [
-  "0xf56DD038B0eC671AbEBAA6499fdd5b195Cf089e4", // TABcoin
-  "0x05fa1e1EE3249C26db881930F0bF2cb1fe05da98", // ConditionalTokens
-  "0x1157c1D6027A5f4Cd62682A7F0d1da426A4b65E3", // PredictionMarketV2
-  "0x1e79FAc6B154B49101252C447E0e68a0a20fc3c0", // PositionWrapperFactory
-  "0xb6Df8d192e0d8EFD03E248aeC59C37E55C5A9998", // TabClob
+  "0x5FbDB2315678afecb367f032d93F642f64180aa3", // TABcoin
+  "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512", // ConditionalTokens
+  "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", // PredictionMarketV2
+  "0xDc64a140Aa3E981100a9becA4E685f962f0cF6C9", // PositionWrapperFactory
+  "0x0165878A594ca255338adfa4d48449f69242Eb8F", // TabClob
 ];
+
+// Default Hardhat account #0 — used as deployer in hardhat-deploy. With
+// BASE_FORK off (default), the node starts at nonce 0 and the setNonce call
+// below is a no-op. With BASE_FORK=true the same key inherits its real
+// mainnet nonce (~42k+); setNonce will fail in that mode and we surface a
+// clear warning, because contracts then land at NON-canonical addresses
+// that BE web3_client._HARDHAT_DEFAULTS won't find.
+const DEPLOYER = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
+const DEPLOYER_BALANCE = "0x21e19e0c9bab2400000"; // 10 000 ETH in wei (hex)
+
+// Well-known Hardhat default mnemonic accounts — safe to print, public test keys.
+// https://hardhat.org/hardhat-network/docs/reference#initial-state
+const DEV_ACCOUNTS: { index: number; address: string; pk: string; note?: string }[] = [
+  {
+    index: 0,
+    address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+    pk: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    note: "deployer / oracle",
+  },
+  {
+    index: 1,
+    address: "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
+    pk: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
+  },
+  {
+    index: 2,
+    address: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    pk: "0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a",
+  },
+  {
+    index: 3,
+    address: "0x90F79bf6EB2c4f870365E785982E1f101E93b906",
+    pk: "0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6",
+  },
+  {
+    index: 4,
+    address: "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65",
+    pk: "0x47e179ec197488593b187f80a00eb0da91f1b9d0b13f8733639f19c30a34926a",
+  },
+];
+
+// TABcoin lives at the deterministic CREATE address of nonce 0. Used to
+// query balances for the printout — kept in sync with EXPECTED_CONTRACTS[0].
+const TAB_ADDRESS = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+const TAB_BALANCE_OF_SELECTOR = "0x70a08231"; // balanceOf(address)
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -89,6 +134,68 @@ async function allContractsDeployed(): Promise<boolean> {
     if (!code || code === "0x") return false;
   }
   return true;
+}
+
+// Decimal ETH (18 decimals) from a 0x-prefixed wei hex string. We avoid pulling
+// in ethers just for printing — small inline helper is fine.
+function formatEth(weiHex: string): string {
+  const wei = BigInt(weiHex);
+  const whole = wei / 10n ** 18n;
+  const frac = wei % 10n ** 18n;
+  if (frac === 0n) return whole.toString();
+  // 4-decimal precision; trim trailing zeros.
+  const fracStr = (frac / 10n ** 14n).toString().padStart(4, "0").replace(/0+$/, "");
+  return fracStr ? `${whole}.${fracStr}` : whole.toString();
+}
+
+async function getEthBalance(addr: string): Promise<string> {
+  try {
+    const hex = await rpc<string>("eth_getBalance", [addr, "latest"]);
+    return formatEth(hex);
+  } catch {
+    return "?";
+  }
+}
+
+async function getTabBalance(addr: string): Promise<string> {
+  try {
+    const data = TAB_BALANCE_OF_SELECTOR + addr.slice(2).toLowerCase().padStart(64, "0");
+    const hex = await rpc<string>("eth_call", [{ to: TAB_ADDRESS, data }, "latest"]);
+    return formatEth(hex);
+  } catch {
+    return "?";
+  }
+}
+
+async function printSummary(): Promise<void> {
+  const lines: string[] = [];
+  lines.push("");
+  lines.push("══════════════════════════════════════════════════════════════════════");
+  lines.push("  ✅  Local stack ready");
+  lines.push("");
+  lines.push("  Network");
+  lines.push("    Chain ID  :  31337");
+  lines.push("    RPC URL   :  http://127.0.0.1:8545");
+  lines.push("    Currency  :  ETH");
+  lines.push("");
+  lines.push("  Test accounts — paste the PK into MetaMask → Import account");
+  for (const acc of DEV_ACCOUNTS) {
+    const [eth, tab] = await Promise.all([
+      getEthBalance(acc.address),
+      getTabBalance(acc.address),
+    ]);
+    const tag = acc.note ? `  (${acc.note})` : "";
+    lines.push(`    [${acc.index}] ${acc.address}${tag}`);
+    lines.push(`        ETH: ${eth}    TAB: ${tab}`);
+    lines.push(`        PK:  ${acc.pk}`);
+  }
+  lines.push("");
+  lines.push("  Apps");
+  lines.push("    web :  http://localhost:5173");
+  lines.push("    api :  http://localhost:8000/docs");
+  lines.push("══════════════════════════════════════════════════════════════════════");
+  lines.push("");
+  console.log(lines.join("\n"));
 }
 
 function killPort(port: number): Promise<void> {
@@ -151,8 +258,9 @@ async function main() {
     const ready = await allContractsDeployed();
     if (ready) {
       console.log(
-        `\n✅  Hardhat node + contracts already running on :${PORT} — reusing.\n`,
+        `\n✅  Hardhat node + contracts already running on :${PORT} — reusing.`,
       );
+      await printSummary();
       // Stay alive so turbo keeps this task "running".
       await new Promise(() => {});
       return;
@@ -172,13 +280,26 @@ async function main() {
   await waitForPort(PORT);
   console.log("✅  Node ready\n");
 
+  // Defensive: ensure deployer has a sane state. setNonce will fail on a
+  // forked chain (Base mainnet inherits ~42k nonce for this well-known key);
+  // we surface a clear warning in that case. With forking off (default) the
+  // node starts at nonce 0 and this is a no-op.
+  try {
+    await rpc("hardhat_setNonce", [DEPLOYER, "0x0"]);
+  } catch (err) {
+    console.warn(
+      `⚠   Could not reset deployer nonce — likely BASE_FORK=true. ` +
+        `Contracts will deploy at NON-default addresses, BE will not find them.\n   ${(err as Error).message}\n`,
+    );
+  }
+  await rpc("hardhat_setBalance", [DEPLOYER, DEPLOYER_BALANCE]);
+
   // --reset clears deployments/localhost so contracts always redeploy from
   // nonce 0 → addresses match _HARDHAT_DEFAULTS in BE web3_client.py.
   await runAndWait("hardhat", ["deploy", "--reset"]);
 
   console.log("\n🎉  Contracts deployed — apps/web/.env.local updated");
-  console.log("    hardhat[1]  0x70997970C51812dc3A010C7d01b50e0d17dc79C8");
-  console.log("    PK:         0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d\n");
+  await printSummary();
 
   await new Promise((_, reject) =>
     node.on("exit", (code) => reject(new Error(`Node exited: ${code}`))),

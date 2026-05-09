@@ -181,15 +181,27 @@ async def _prepare_create_market(
     args: dict[str, Any], ctx: ToolContext
 ) -> dict[str, Any]:
     oracle = args.get("oracle") or _require_address(ctx)
+
+    # Derive shape from labels when the LLM omits outcome_type / slot_count, so
+    # we can't ship a card that reverts in PMv2._validateOutcomeShape (BINARY/
+    # SCALAR require 2 slots, MULTI requires ≥3) or trips the labels-length
+    # check. Hardhat surfaces both as an opaque "internal error" via eth_call.
+    labels: list[str] = args.get("outcome_labels", ["No", "Yes"])
+    slot_count = int(args.get("outcome_slot_count", len(labels)))
+    if "outcome_type" in args:
+        outcome_type = int(args["outcome_type"])
+    else:
+        outcome_type = 0 if slot_count == 2 else 1  # BINARY / MULTI
+
     card = await asyncio.to_thread(
         prepare_tools.prepare_create_market,
         ctx.client,
         args["name"],
         args["description"],
         args.get("category", "other"),
-        int(args.get("outcome_type", 0)),
-        int(args.get("outcome_slot_count", 2)),
-        args.get("outcome_labels", ["No", "Yes"]),
+        outcome_type,
+        slot_count,
+        labels,
         oracle,
         int(args["expires_at"]),
         int(args["resolution_time"]),

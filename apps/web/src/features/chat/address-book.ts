@@ -19,7 +19,7 @@ import {
 
 const SELECTORS = {
   approve: "0x095ea7b3",
-  createMarket: "0xb487a72d",
+  createMarket: "0x6cd16f29",
   splitTo: "0x9d8a8d28",
   mergeFrom: "0xfe2bb5d3",
   splitAndWrap: "0x73c1f4dc",
