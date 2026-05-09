@@ -11,6 +11,7 @@ import type { Market, MarketCategory } from "@/features/market/types"
 import { OrderBook } from "@/features/orders/components/order-book"
 import { TradingPanel } from "@/features/market/components/trading-panel"
 import { ResolutionBar } from "@/features/market/components/resolution-bar"
+import { CommentsSection } from "@/features/market/components/comments-section"
 
 // ── Static config ─────────────────────────────────────────────────────────────
 
@@ -204,6 +205,9 @@ export function MarketDetail({ id }: { id: string }) {
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Order Book</h2>
             <OrderBook market={liveMarket ?? market} />
           </section>
+
+          {/* Comments */}
+          <CommentsSection marketId={market.id} />
         </div>
 
         {/* Right — trading panel */}
