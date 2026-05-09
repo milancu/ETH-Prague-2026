@@ -27,15 +27,21 @@ from web3.contract import Contract
 # ABI loader
 # ---------------------------------------------------------------------------
 
-_ARTIFACTS_ROOT = (
+_ABI_DIR = Path(__file__).parent.parent / "abi"
+
+_HARDHAT_ARTIFACTS = (
     Path(__file__).parent.parent.parent.parent.parent.parent
     / "apps/contracts/packages/hardhat/artifacts/contracts"
 )
 
 
-def _load_abi(sol_file: str, contract_name: str) -> list[dict[str, Any]]:
-    path = _ARTIFACTS_ROOT / sol_file / f"{contract_name}.json"
-    with open(path) as fh:
+def _load_abi(name: str) -> list[dict[str, Any]]:
+    local = _ABI_DIR / f"{name}.json"
+    if local.exists():
+        with open(local) as fh:
+            return json.load(fh)  # type: ignore[no-any-return]
+    hardhat = _HARDHAT_ARTIFACTS / f"{name}.sol" / f"{name}.json"
+    with open(hardhat) as fh:
         return json.load(fh)["abi"]  # type: ignore[no-any-return]
 
 
@@ -44,7 +50,7 @@ _ABI: dict[str, list[dict[str, Any]]] = {}
 
 def _abi(name: str) -> list[dict[str, Any]]:
     if name not in _ABI:
-        _ABI[name] = _load_abi(f"{name}.sol", name)
+        _ABI[name] = _load_abi(name)
     return _ABI[name]
 
 
