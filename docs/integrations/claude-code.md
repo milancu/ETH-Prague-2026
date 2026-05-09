@@ -8,26 +8,14 @@ or sign automatically if you've registered an x402 wallet.
 
 ## Install
 
-Run our backend somewhere reachable (locally: `uvicorn api.main:app --port 8000`).
-
-Then register the MCP server with Claude Code:
-
 ```bash
-claude mcp add prediction-market http://localhost:8000/mcp
+claude mcp add --transport http prediction-market https://api.kowalski-market.com/mcp/
 ```
 
-This writes an entry into your Claude Code config (typically
-`~/.claude/mcp.json`):
+For local dev, point at your own backend instead:
 
-```jsonc
-{
-  "mcpServers": {
-    "prediction-market": {
-      "type": "http",
-      "url": "http://localhost:8000/mcp"
-    }
-  }
-}
+```bash
+claude mcp add --transport http prediction-market http://localhost:8000/mcp/
 ```
 
 Verify the server is registered:
