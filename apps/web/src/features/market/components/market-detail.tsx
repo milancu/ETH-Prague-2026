@@ -10,7 +10,6 @@ import { formatDate, marketStatusLabel } from "@/features/market/lib/utils"
 import type { Market, MarketCategory } from "@/features/market/types"
 import { OrderBook } from "@/features/orders/components/order-book"
 import { TradingPanel } from "@/features/market/components/trading-panel"
-import { DEFAULT_ORACLE } from "@/lib/contracts"
 import { ResolutionBar } from "@/features/market/components/resolution-bar"
 import { CommentsSection } from "@/features/market/components/comments-section"
 import { MarketPriceChart } from "@/features/market/components/market-price-chart"
@@ -211,7 +210,7 @@ export function MarketDetail({ id }: { id: string }) {
             <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Details</h2>
             <div className={cn("border border-border px-4", cat.border, "border-l-2")}>
               <MetaRow label="Creator"      value={market.creator}      mono truncate />
-              <MetaRow label="Oracle"       value={DEFAULT_ORACLE}      mono truncate />
+              <MetaRow label="Oracle"       value={market.creator}      mono truncate />
               <MetaRow label="Condition ID" value={market.conditionId}  mono truncate />
               <MetaRow label="Tx Hash"      value={market.txHash}       mono truncate />
               <MetaRow label="Chain"        value={`${market.chainId}`} />

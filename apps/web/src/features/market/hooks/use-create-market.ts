@@ -10,7 +10,6 @@ import {
   TABCOIN_ADDRESS,
   ERC20_ABI,
   DEFAULT_BOND,
-  DEFAULT_ORACLE,
   OUTCOME_TYPE,
 } from "@/lib/contracts"
 import type { CreateMarketInput } from "@/features/market/lib/schema"
@@ -107,7 +106,7 @@ export function useCreateMarket() {
         outcomeType:      OUTCOME_TYPE[data.outcomeType],
         outcomeSlotCount: outcomeSlotCount(data),
         outcomeLabels:    buildOutcomeLabels(data),
-        oracle:           DEFAULT_ORACLE,
+        oracle:           address,
         expiresAt:        expiresAtTs,
         resolutionTime:   resolutionTs,
       }],
