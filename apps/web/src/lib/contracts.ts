@@ -174,6 +174,23 @@ export const CONDITIONAL_TOKENS_ABI = [
     ],
     outputs: [{ name: "", type: "bool" }],
   },
+  {
+    name: "payoutNumerators",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "conditionId", type: "bytes32" },
+      { name: "index",       type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "payoutDenominator",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "conditionId", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint256" }],
+  },
 ] as const
 
 const ORDER_COMPONENTS = [

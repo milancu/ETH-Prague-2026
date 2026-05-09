@@ -265,13 +265,26 @@ function usePositionData(address: `0x${string}` | undefined, market: Market) {
 
 function ClaimPanel({ market }: { market: Market }) {
   const { address } = useAccount()
-  const { slots, rawBalances } = usePositionData(address, market)
+  const { slots, rawBalances, erc20Balances, wrappers } = usePositionData(address, market)
   const { claimWinnings, isPending } = useClaimWinnings()
 
-  const claimable = slots.filter((_, i) => rawBalances[i] > 0n)
+  const claimable = slots
+    .map((slot, i) => ({
+      ...slot,
+      rawBalance: rawBalances[i],
+      wrapperAddress: wrappers[i],
+      wrappedBalance: erc20Balances[i],
+    }))
+    .filter(s => s.rawBalance > 0n || s.wrappedBalance > 0n)
 
   async function handleClaim() {
-    try { await claimWinnings(market, claimable.map(s => s.indexSet)) }
+    try {
+      await claimWinnings(market, claimable.map(s => ({
+        indexSet: s.indexSet,
+        wrapperAddress: s.wrapperAddress,
+        wrappedBalance: s.wrappedBalance,
+      })))
+    }
     catch { /* toast handled */ }
   }
 
@@ -287,11 +300,17 @@ function ClaimPanel({ market }: { market: Market }) {
       <div className="flex flex-col">
         {claimable.map((slot) => {
           const pal = slotPalette(slots.indexOf(slot), market)
+          const total = slot.rawBalance + slot.wrappedBalance
           return (
             <div key={slot.label} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <span className={cn("text-xs font-bold tracking-wide", pal.text)}>{slot.label}</span>
               <span className="font-mono text-xs tabular-nums text-foreground">
-                {formatBalance(rawBalances[slots.indexOf(slot)])}
+                {formatBalance(total)}
+                {slot.wrappedBalance > 0n && (
+                  <span className="ml-1 text-[9px] text-muted-foreground uppercase tracking-widest">
+                    ({formatBalance(slot.wrappedBalance)} wrapped)
+                  </span>
+                )}
               </span>
             </div>
           )
@@ -372,154 +391,6 @@ function PositionRow({ label, raw, wrapped, wrapperExists, palette, isWrapping, 
       )}>
         {hasWrapped ? formatBalance(wrapped) : "—"}
       </span>
-    </div>
-  )
-}
-
-function MintPanel({ market }: { market: Market }) {
-  const { address } = useAccount()
-  const [mintAmount, setMintAmount] = useState("")
-  const { split, isPending: splitting } = useSplit()
-  const { wrap, wrapping } = useWrap()
-
-  const { slots, rawBalances, erc20Balances, wrappers, refetch } = usePositionData(address, market)
-
-  const hasAnyPosition = rawBalances.some(b => b > 0n) || erc20Balances.some(b => b > 0n)
-  const mintPreviewAmt = parseFloat(mintAmount) > 0 ? mintAmount : null
-
-  async function handleMint() {
-    if (!mintAmount || Number(mintAmount) <= 0) return
-    try {
-      await split({ market, tabAmountWei: parseEther(mintAmount) })
-      setMintAmount("")
-      refetch()
-    } catch { /* toast handled */ }
-  }
-
-  async function handleWrap(i: number) {
-    const raw = rawBalances[i]
-    if (raw === 0n) return
-    try {
-      await wrap({ market, indexSet: slots[i].indexSet, amount: raw })
-      refetch()
-    } catch { /* toast handled */ }
-  }
-
-  return (
-    <div className="flex flex-col border border-border">
-      {/* ── Card header ── */}
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border">
-        <Layers className="size-3 shrink-0 text-muted-foreground/60" aria-hidden />
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Positions
-        </span>
-      </div>
-
-      {/* ── Positions table ── */}
-      <div className="border-b border-border">
-
-        {!address ? (
-          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">
-            Connect wallet to see positions.
-          </p>
-        ) : !hasAnyPosition ? (
-          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">
-            No positions yet — mint below to get started.
-          </p>
-        ) : (
-          <>
-            {/* Column headers */}
-            <div className="grid grid-cols-[52px_1fr_48px_1fr] items-center gap-x-2 px-4 pb-1.5">
-              <span />
-              <span className="text-right text-[9px] uppercase tracking-widest text-muted-foreground/40 font-semibold">
-                ERC-1155
-              </span>
-              <span />
-              <span className="text-right text-[9px] uppercase tracking-widest text-muted-foreground/40 font-semibold">
-                ERC-20
-              </span>
-            </div>
-            {/* Sub-labels */}
-            <div className="grid grid-cols-[52px_1fr_48px_1fr] items-center gap-x-2 px-4 pb-2">
-              <span />
-              <span className="text-right text-[9px] text-muted-foreground/30">raw · illiquid</span>
-              <span />
-              <span className="text-right text-[9px] text-muted-foreground/30">tradeable</span>
-            </div>
-            {/* Rows */}
-            {slots.map((slot, i) => (
-              <PositionRow
-                key={slot.label}
-                label={slot.label}
-                raw={rawBalances[i]}
-                wrapped={erc20Balances[i]}
-                wrapperExists={wrappers[i] !== null}
-                palette={slotPalette(i, market)}
-                isWrapping={wrapping === slot.indexSet}
-                onWrap={() => handleWrap(i)}
-              />
-            ))}
-          </>
-        )}
-      </div>
-
-      {/* ── Mint new ── */}
-      <div className="flex flex-col gap-3 p-4">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Mint New
-          </span>
-          <span className="text-[10px] text-muted-foreground/50">· 1:1 ratio</span>
-        </div>
-
-        <div className="flex gap-2">
-          <AmountInput
-            value={mintAmount}
-            onChange={setMintAmount}
-            unit="TAB"
-            label="TABcoin to split into positions"
-            disabled={splitting}
-          />
-          <Button
-            onClick={handleMint}
-            disabled={Number(mintAmount) <= 0 || splitting}
-            className="shrink-0"
-          >
-            {splitting ? "Minting…" : "Mint"}
-          </Button>
-        </div>
-
-        {/* Preview */}
-        {mintPreviewAmt && (
-          <div className="flex flex-wrap items-center gap-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150">
-            <span className="text-[10px] text-muted-foreground/60">You receive</span>
-            {slots.map((slot, i) => {
-              const pal = slotPalette(i, market)
-              return (
-                <span key={slot.label} className="flex items-center gap-1">
-                  <span className={cn("font-mono text-[11px] font-semibold tabular-nums", pal.text)}>
-                    {mintPreviewAmt}
-                  </span>
-                  <span className={cn("text-[10px] font-bold tracking-wide", pal.text)}>
-                    {slot.label}
-                  </span>
-                  {i < slots.length - 1 && (
-                    <span className="text-muted-foreground/40 text-[10px] mx-0.5">+</span>
-                  )}
-                </span>
-              )
-            })}
-            <span className="text-[10px] text-muted-foreground/40 ml-0.5">(raw ERC-1155)</span>
-          </div>
-        )}
-
-        {/* Explainer */}
-        <p className="text-[10px] leading-relaxed text-muted-foreground/50">
-          Raw tokens are not tradeable on the order book.{" "}
-          Use <strong className="text-muted-foreground/70 font-semibold">Wrap →</strong> above
-          to convert to ERC-20 for trading.
-        </p>
-      </div>
     </div>
   )
 }
