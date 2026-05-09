@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel
 from web3 import Web3
 
+_BUNDLED_ABI_DIR = Path(__file__).parent.parent / "abi"
 _ARTIFACTS_ROOT = (
     Path(__file__).parent.parent.parent.parent.parent.parent
     / "apps/contracts/packages/hardhat/artifacts/contracts"
@@ -28,8 +29,14 @@ router = APIRouter(prefix="/v1/ens", tags=["free"])
 
 
 def _load_abi(sol_path: str, contract_name: str) -> list[dict[str, Any]]:
-    path = _ARTIFACTS_ROOT / sol_path / f"{contract_name}.json"
-    with open(path) as fh:
+    sol_dir = os.path.dirname(sol_path)
+    bundled = _BUNDLED_ABI_DIR / sol_dir / f"{contract_name}.json"
+    if bundled.exists():
+        with open(bundled) as fh:
+            data = json.load(fh)
+        return data if isinstance(data, list) else data["abi"]  # type: ignore[no-any-return]
+    hardhat = _ARTIFACTS_ROOT / sol_path / f"{contract_name}.json"
+    with open(hardhat) as fh:
         return json.load(fh)["abi"]  # type: ignore[no-any-return]
 
 

@@ -44,6 +44,7 @@ _ENABLED = os.getenv("ENS_BRIDGE_ENABLED", "") == "1"
 _BASE_SEPOLIA_CHAIN = 84532
 _ETH_SEPOLIA_CHAIN = 11155111
 
+_BUNDLED_ABI_DIR = Path(__file__).parent.parent / "abi"
 _ARTIFACTS_ROOT = (
     Path(__file__).parent.parent.parent.parent.parent.parent
     / "apps/contracts/packages/hardhat/artifacts/contracts"
@@ -55,8 +56,21 @@ def is_bridge_enabled() -> bool:
 
 
 def _load_abi(sol_path: str, contract_name: str) -> list[dict[str, Any]]:
-    path = _ARTIFACTS_ROOT / sol_path / f"{contract_name}.json"
-    with open(path) as fh:
+    """Load ABI for `contract_name`.
+
+    Prefers the bundled copy at `apps/api/src/api/abi/<dir>/<name>.json`
+    (where `<dir>` mirrors the contract's source directory — empty for
+    top-level contracts, "ens" for ENS contracts).  Falls back to the
+    hardhat artifacts tree for local dev where ABIs aren't yet bundled.
+    """
+    sol_dir = os.path.dirname(sol_path)
+    bundled = _BUNDLED_ABI_DIR / sol_dir / f"{contract_name}.json"
+    if bundled.exists():
+        with open(bundled) as fh:
+            data = json.load(fh)
+        return data if isinstance(data, list) else data["abi"]  # type: ignore[no-any-return]
+    hardhat = _ARTIFACTS_ROOT / sol_path / f"{contract_name}.json"
+    with open(hardhat) as fh:
         return json.load(fh)["abi"]  # type: ignore[no-any-return]
 
 
