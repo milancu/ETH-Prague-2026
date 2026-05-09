@@ -25,6 +25,7 @@ import re
 from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 from sqlmodel import col, func, select
 
 from api.db.models import Market, Order
@@ -59,6 +60,15 @@ _INTELLIGENCE_META_PREMIUM: dict[str, Any] = {
     "x402_network": os.getenv("X402_MCP_NETWORK", "eip155:84532"),
 }
 
+_raw_hosts = os.getenv("MCP_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+_MCP_ALLOWED_HOSTS: list[str] = []
+for _h in _raw_hosts:
+    _h = _h.strip()
+    if _h:
+        _MCP_ALLOWED_HOSTS.append(_h)
+        if ":" not in _h:
+            _MCP_ALLOWED_HOSTS.append(f"{_h}:8000")
+
 mcp = FastMCP(
     "Prediction Market Agent API",
     instructions=(
@@ -69,6 +79,9 @@ mcp = FastMCP(
     ),
     stateless_http=True,
     streamable_http_path="/",
+    transport_security=TransportSecuritySettings(
+        allowed_hosts=_MCP_ALLOWED_HOSTS,
+    ),
 )
 
 
