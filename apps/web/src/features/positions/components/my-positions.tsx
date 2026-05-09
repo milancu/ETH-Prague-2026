@@ -1,7 +1,22 @@
+import { useMemo } from "react"
 import { useAccount } from "wagmi"
 import { useMarkets } from "@/features/market/hooks/use-markets"
 import { usePositions } from "@/features/positions/hooks/use-positions"
-import { PositionRow } from "@/features/positions/components/position-row"
+import { WalletOverview } from "@/features/positions/components/wallet-overview"
+import { MarketPositionCard } from "@/features/positions/components/market-position-card"
+import type { Market } from "@/features/market/types"
+import type { Position } from "@/features/positions/hooks/use-positions"
+
+function groupByMarket(positions: Position[]): { market: Market; positions: Position[] }[] {
+  const map = new Map<string, { market: Market; positions: Position[] }>()
+  for (const p of positions) {
+    if (!map.has(p.market.id)) {
+      map.set(p.market.id, { market: p.market, positions: [] })
+    }
+    map.get(p.market.id)!.positions.push(p)
+  }
+  return Array.from(map.values())
+}
 
 export function MyPositions() {
   const { address, isConnected } = useAccount()
@@ -11,6 +26,7 @@ export function MyPositions() {
     page?.markets ?? [],
   )
 
+  const grouped = useMemo(() => groupByMarket(positions), [positions])
   const isLoading = marketsLoading || positionsLoading
 
   if (!isConnected) {
@@ -21,38 +37,27 @@ export function MyPositions() {
     )
   }
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col gap-1 animate-pulse">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-9 bg-muted" />
-        ))}
-      </div>
-    )
-  }
-
-  if (positions.length === 0) {
-    return (
-      <p className="py-16 text-center text-sm text-muted-foreground">
-        No positions held.
-      </p>
-    )
-  }
-
   return (
-    <div className="flex flex-col border border-border">
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30">
-        <span className="w-14 shrink-0 text-[10px] uppercase tracking-widest text-muted-foreground">Outcome</span>
-        <span className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground">Market</span>
-        <span className="text-right text-[10px] uppercase tracking-widest text-muted-foreground">Balance</span>
-        <span className="w-10 shrink-0" />
-      </div>
-      {positions.map(position => (
-        <PositionRow
-          key={`${position.marketId}-${position.outcomeLabel}`}
-          position={position}
-        />
-      ))}
+    <div className="flex flex-col gap-6">
+      {address && <WalletOverview address={address} />}
+
+      {isLoading ? (
+        <div className="flex flex-col gap-3 animate-pulse">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="h-32 bg-muted" />
+          ))}
+        </div>
+      ) : grouped.length === 0 ? (
+        <p className="py-10 text-center text-sm text-muted-foreground">
+          No positions held.
+        </p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {grouped.map(({ market, positions: ps }) => (
+            <MarketPositionCard key={market.id} market={market} positions={ps} />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

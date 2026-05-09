@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as PositionsRouteImport } from './routes/positions'
 import { Route as OrdersRouteImport } from './routes/orders'
+import { Route as FaucetRouteImport } from './routes/faucet'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MarketsMarketIdRouteImport } from './routes/markets/$marketId'
 
@@ -22,6 +23,11 @@ const PositionsRoute = PositionsRouteImport.update({
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FaucetRoute = FaucetRouteImport.update({
+  id: '/faucet',
+  path: '/faucet',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +43,14 @@ const MarketsMarketIdRoute = MarketsMarketIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/faucet': typeof FaucetRoute
   '/orders': typeof OrdersRoute
   '/positions': typeof PositionsRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/faucet': typeof FaucetRoute
   '/orders': typeof OrdersRoute
   '/positions': typeof PositionsRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
@@ -50,20 +58,28 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/faucet': typeof FaucetRoute
   '/orders': typeof OrdersRoute
   '/positions': typeof PositionsRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/orders' | '/positions' | '/markets/$marketId'
+  fullPaths: '/' | '/faucet' | '/orders' | '/positions' | '/markets/$marketId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/orders' | '/positions' | '/markets/$marketId'
-  id: '__root__' | '/' | '/orders' | '/positions' | '/markets/$marketId'
+  to: '/' | '/faucet' | '/orders' | '/positions' | '/markets/$marketId'
+  id:
+    | '__root__'
+    | '/'
+    | '/faucet'
+    | '/orders'
+    | '/positions'
+    | '/markets/$marketId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  FaucetRoute: typeof FaucetRoute
   OrdersRoute: typeof OrdersRoute
   PositionsRoute: typeof PositionsRoute
   MarketsMarketIdRoute: typeof MarketsMarketIdRoute
@@ -85,6 +101,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/faucet': {
+      id: '/faucet'
+      path: '/faucet'
+      fullPath: '/faucet'
+      preLoaderRoute: typeof FaucetRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +127,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  FaucetRoute: FaucetRoute,
   OrdersRoute: OrdersRoute,
   PositionsRoute: PositionsRoute,
   MarketsMarketIdRoute: MarketsMarketIdRoute,

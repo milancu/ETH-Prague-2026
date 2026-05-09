@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router"
 import { cn } from "@workspace/ui/lib/utils"
 import { Trash2, Zap } from "lucide-react"
 import { toast } from "sonner"
@@ -7,17 +8,36 @@ import {
   getOrderSide,
   getOrderPrice,
   getOutcomeAmount,
+  getTabTotal,
   formatExpiry,
+  formatCreatedAt,
   truncateAddress,
 } from "@/features/orders/lib/utils"
 import type { Order } from "@/features/orders/types"
+import type { Market, MarketCategory } from "@/features/market/types"
+
+const CATEGORY_BADGE: Record<MarketCategory, string> = {
+  Finance:  "bg-amber-500/10  text-amber-400",
+  Politics: "bg-blue-500/10   text-blue-400",
+  Sport:    "bg-emerald-500/10 text-emerald-400",
+  Czech:    "bg-purple-500/10 text-purple-400",
+  Weather:  "bg-cyan-500/10   text-cyan-400",
+}
+
+const STATUS_BADGE: Record<string, string> = {
+  open:      "border-emerald-500/30 text-emerald-400",
+  pending:   "border-amber-500/30   text-amber-400",
+  resolved:  "border-border         text-muted-foreground",
+  cancelled: "border-rose-500/30    text-rose-400",
+}
 
 interface OrderRowProps {
   order: Order
+  market?: Market
   isOwn: boolean
 }
 
-export function OrderRow({ order, isOwn }: OrderRowProps) {
+export function OrderRow({ order, market, isOwn }: OrderRowProps) {
   const { mutate: deleteOrder, isPending: isCancelling } = useDeleteOrder()
   const { fillOrder, isPending: isFilling } = useFillOrder()
   const isPending = isCancelling || isFilling
@@ -25,6 +45,7 @@ export function OrderRow({ order, isOwn }: OrderRowProps) {
   const side = getOrderSide(order)
   const price = getOrderPrice(order)
   const amount = getOutcomeAmount(order)
+  const total = getTabTotal(order)
 
   function handleCancel() {
     deleteOrder(order, {
@@ -57,26 +78,63 @@ export function OrderRow({ order, isOwn }: OrderRowProps) {
         {side === "buy" ? "BUY" : "SELL"}
       </span>
 
-      {/* Note or maker address */}
-      <span className="min-w-0 flex-1 truncate text-xs text-foreground">
-        {order.note ?? truncateAddress(order.maker)}
-      </span>
+      {/* Market info or fallback */}
+      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+        {market ? (
+          <>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Link
+                to="/markets/$marketId"
+                params={{ marketId: market.id }}
+                onClick={(e) => e.stopPropagation()}
+                className="truncate text-xs font-medium text-foreground hover:underline underline-offset-2"
+              >
+                {market.title}
+              </Link>
+              <span className={cn(
+                "shrink-0 px-1 py-0.5 text-[9px] font-bold tracking-widest uppercase",
+                CATEGORY_BADGE[market.category],
+              )}>
+                {market.category}
+              </span>
+              <span className={cn(
+                "shrink-0 px-1 py-0.5 text-[9px] tracking-widest uppercase border",
+                STATUS_BADGE[market.status] ?? "border-border text-muted-foreground",
+              )}>
+                {market.status}
+              </span>
+            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {order.note ? `${order.note} · ` : ""}Created {formatCreatedAt(order.createdAt)}
+            </span>
+          </>
+        ) : (
+          <span className="truncate text-xs text-foreground">
+            {order.note ?? truncateAddress(order.maker)}
+          </span>
+        )}
+      </div>
 
       {/* Price */}
       <span className={cn(
-        "shrink-0 w-16 text-right text-xs font-semibold tabular-nums",
+        "hidden shrink-0 w-20 text-right text-xs font-semibold tabular-nums sm:block",
         side === "buy" ? "text-emerald-400" : "text-rose-400",
       )}>
         {price.toFixed(3)} TAB
       </span>
 
       {/* Amount */}
-      <span className="shrink-0 w-16 text-right text-xs tabular-nums text-muted-foreground">
+      <span className="hidden shrink-0 w-16 text-right text-xs tabular-nums text-muted-foreground sm:block">
         {amount}
       </span>
 
+      {/* Total */}
+      <span className="shrink-0 w-20 text-right text-xs font-semibold tabular-nums text-foreground">
+        {total} TAB
+      </span>
+
       {/* Expiry */}
-      <span className="hidden shrink-0 w-20 text-right text-[10px] text-muted-foreground sm:block">
+      <span className="hidden shrink-0 w-24 text-right text-[10px] text-muted-foreground lg:block">
         {formatExpiry(order.expiry)}
       </span>
 

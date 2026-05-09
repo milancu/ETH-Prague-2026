@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: "/", label: "Markets" },
   { to: "/orders", label: "Orders" },
   { to: "/positions", label: "Positions" },
+  { to: "/faucet", label: "Faucet" },
 ] as const
 
 const NAV_LINK_CLASS =

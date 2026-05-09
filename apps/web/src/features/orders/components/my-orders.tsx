@@ -1,12 +1,24 @@
+import { useMemo } from "react"
 import { useAccount } from "wagmi"
 import { useOrders } from "@/features/orders/hooks/use-orders"
+import { useMarkets } from "@/features/market/hooks/use-markets"
 import { OrderRow } from "@/features/orders/components/order-row"
+import type { Market } from "@/features/market/types"
 
 export function MyOrders() {
   const { address, isConnected } = useAccount()
-  const { data: orders = [], isLoading } = useOrders(
+  const { data: orders = [], isLoading: ordersLoading } = useOrders(
     address ? { maker: address } : undefined,
   )
+  const { data: marketPage } = useMarkets()
+
+  const marketById = useMemo((): Map<number, Market> => {
+    const map = new Map<number, Market>()
+    for (const m of marketPage?.markets ?? []) {
+      map.set(m.marketId, m)
+    }
+    return map
+  }, [marketPage])
 
   if (!isConnected) {
     return (
@@ -16,11 +28,11 @@ export function MyOrders() {
     )
   }
 
-  if (isLoading) {
+  if (ordersLoading) {
     return (
       <div className="flex flex-col gap-1 animate-pulse">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-9 bg-muted" />
+          <div key={i} className="h-14 bg-muted" />
         ))}
       </div>
     )
@@ -39,15 +51,21 @@ export function MyOrders() {
       {/* Header */}
       <div className="flex items-center gap-3 px-3 py-1.5 border-b border-border bg-muted/30">
         <span className="w-10 shrink-0 text-[10px] uppercase tracking-widest text-muted-foreground">Side</span>
-        <span className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground">Note</span>
-        <span className="w-16 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground">Price</span>
-        <span className="w-16 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground">Amount</span>
-        <span className="hidden w-20 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground sm:block">Expiry</span>
+        <span className="flex-1 text-[10px] uppercase tracking-widest text-muted-foreground">Market</span>
+        <span className="hidden w-20 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground sm:block">Price</span>
+        <span className="hidden w-16 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground sm:block">Amount</span>
+        <span className="w-20 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground">Total</span>
+        <span className="hidden w-24 shrink-0 text-right text-[10px] uppercase tracking-widest text-muted-foreground lg:block">Expiry</span>
         <div className="w-[22px] shrink-0" />
       </div>
 
       {orders.map((order) => (
-        <OrderRow key={order.id} order={order} isOwn />
+        <OrderRow
+          key={order.id}
+          order={order}
+          market={order.marketId != null ? marketById.get(order.marketId) : undefined}
+          isOwn
+        />
       ))}
     </div>
   )

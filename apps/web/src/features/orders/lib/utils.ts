@@ -44,3 +44,17 @@ export function formatExpiry(expiry: number): string {
 export function truncateAddress(addr: string): string {
   return `${addr.slice(0, 6)}…${addr.slice(-4)}`
 }
+
+// Total TAB involved: maker pays TAB (buy) or taker pays TAB (sell)
+export function getTabTotal(order: Order): string {
+  const side = getOrderSide(order)
+  return formatTokenAmount(side === "buy" ? order.makerAmount : order.takerAmount)
+}
+
+export function formatCreatedAt(isoStr: string): string {
+  return new Date(isoStr).toLocaleDateString("en-US", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  })
+}
