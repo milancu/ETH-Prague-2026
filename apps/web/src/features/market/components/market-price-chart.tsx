@@ -1,6 +1,11 @@
 import { useState, useRef, useMemo, useCallback } from "react"
 import { motion, useSpring, useMotionTemplate } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPanel,
+} from "@/components/animate-ui/components/base/tooltip"
 import type { Market } from "@/features/market/types"
 
 // ── Emil Kowalski spring config ────────────────────────────────────────────────
@@ -17,6 +22,20 @@ interface ChartPoint {
   volume: number  // 0–1 normalized
   date: Date
 }
+
+interface ChartEvent {
+  offsetDays: number  // days before now
+  label: string       // short label shown in tooltip header
+  description: string
+}
+
+const CHART_EVENTS: ChartEvent[] = [
+  { offsetDays: 78, label: "25% Tariffs Announced", description: "Trump announced 25% tariffs on European imports. Markets reacted with a sharp sell-off." },
+  { offsetDays: 55, label: "Fed Holds Rates", description: "The Fed kept interest rates unchanged at 5.25%. Chair Powell: inflation is under control." },
+  { offsetDays: 38, label: "Poll: +4 pp", description: "STEM poll: support for the leading candidate rose to 54%, up 4 points from last month." },
+  { offsetDays: 17, label: "Primary Results", description: "Primary results: frontrunner leads with 52% of votes, second-place rival drops out." },
+  { offsetDays: 4, label: "TV Debate", description: "Presidential debate: commentators rate the performance as decisive for the election outcome." },
+]
 
 // ── Deterministic mock data ────────────────────────────────────────────────────
 
@@ -125,6 +144,17 @@ export function MarketPriceChart({ market }: { market: Market }) {
   const data = useMemo(() => makeData(market, tf), [market, tf])
   const line = useMemo(() => pathLine(data), [data])
   const area = useMemo(() => pathArea(data), [data])
+
+  const visibleEvents = useMemo(() => {
+    const now = Date.now()
+    const dur = DURATIONS[tf]
+    const rangeStart = now - dur
+    return CHART_EVENTS.flatMap(ev => {
+      const evMs = now - ev.offsetDays * 24 * 3_600_000
+      if (evMs <= rangeStart || evMs >= now) return []
+      return [{ ...ev, xPct: ((evMs - rangeStart) / dur) * 100 }]
+    })
+  }, [tf])
 
   const hovIdx = useMemo(
     () => hovering
@@ -266,6 +296,30 @@ export function MarketPriceChart({ market }: { market: Market }) {
           <path d={area} fill="url(#chart-emerald-fill)" />
           <path d={line} stroke="#10b981" strokeWidth="1.5" fill="none" />
         </motion.svg>
+
+        {/* Event markers */}
+        {visibleEvents.map((ev, i) => (
+          <div
+            key={i}
+            className="absolute top-0 bottom-0 pointer-events-none"
+            style={{ left: `${ev.xPct}%` }}
+          >
+            <div className="absolute inset-y-0 left-0 w-px border-l border-dashed border-amber-400/30" />
+            <Tooltip>
+              <TooltipTrigger
+                className="pointer-events-auto absolute top-0 left-1/2 -translate-x-1/2 size-2.5 rotate-45 rounded-[2px] bg-amber-400/70 hover:bg-amber-400 transition-colors focus:outline-none"
+                aria-label={ev.label}
+              />
+              <TooltipPanel
+                side="top"
+                className="w-[240px] !bg-zinc-900 !text-zinc-100 border border-zinc-700 !text-pretty"
+              >
+                <p className="text-[11px] font-semibold leading-tight">{ev.label}</p>
+                <p className="mt-0.5 text-[10px] leading-snug opacity-70">{ev.description}</p>
+              </TooltipPanel>
+            </Tooltip>
+          </div>
+        ))}
 
         {/* Y-axis percentage labels */}
         {[0.75, 0.5, 0.25].map(p => (

@@ -230,7 +230,6 @@ function LevelRow({
   maxAmt,
   side,
   barClass,
-  palette,
 }: {
   level: Level
   maxAmt: number
@@ -239,7 +238,7 @@ function LevelRow({
   palette: Palette
 }) {
   const depthPct = maxAmt > 0 ? (level.amount / maxAmt) * 100 : 0
-  const priceColor = side === "ask" ? "text-rose-400" : palette.label
+  const priceColor = side === "ask" ? "text-rose-400" : "text-emerald-400"
 
   return (
     <div
@@ -259,6 +258,8 @@ function LevelRow({
         )}
         style={{ width: `${depthPct}%` }}
       />
+      {/* spacer — pushes fixed columns to the right, matching header */}
+      <div className="flex-1" />
       {/* price (0–1) */}
       <span
         className={cn(
@@ -331,8 +332,8 @@ function SingleBookView({ book }: { book: Book }) {
   return (
     <div className="flex flex-col">
       {/* Column headers + mid price */}
-      <div className="flex items-center justify-between border-b border-border/30 px-3 py-1.5">
-        <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5">
+        <div className="flex flex-1 items-center gap-1.5">
           <span className="text-[9px] tracking-widest text-muted-foreground/30 uppercase">
             mid
           </span>
@@ -345,17 +346,15 @@ function SingleBookView({ book }: { book: Book }) {
             {midPrice !== null ? midPrice.toFixed(3) : "—"}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="w-12 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
-            Price
-          </span>
-          <span className="w-14 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
-            Shares
-          </span>
-          <span className="w-14 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
-            Total
-          </span>
-        </div>
+        <span className="w-12 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
+          Price
+        </span>
+        <span className="w-14 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
+          Shares
+        </span>
+        <span className="w-14 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
+          Total
+        </span>
       </div>
 
       {!hasOrders ? (

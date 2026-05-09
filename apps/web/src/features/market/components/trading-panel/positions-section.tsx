@@ -1,5 +1,5 @@
 import { useState } from "react"
-import { parseEther } from "viem"
+import { formatEther, parseEther } from "viem"
 import { Layers } from "lucide-react"
 import { cn } from "@workspace/ui/lib/utils"
 import { Button } from "@workspace/ui/components/button"
@@ -7,12 +7,10 @@ import { useSplit } from "@/features/market/hooks/use-split"
 import { useWrap } from "@/features/market/hooks/use-wrap"
 import type { OutcomeSlot } from "@/features/positions/lib/utils"
 import type { Market } from "@/features/market/types"
-import { slotPalette, fmtAmt } from "./shared"
+import { fmtAmt, slotPalette } from "./shared"
 import { AmountInput, InlineWarn, PositionRow } from "./components"
-import { useAccount } from "wagmi"
-import { useReadContract } from "wagmi"
+import { useAccount, useReadContract } from "wagmi"
 import { ERC20_ABI, TABCOIN_ADDRESS } from "@/lib/contracts"
-import { formatEther } from "viem"
 
 interface Props {
   market: Market
@@ -23,17 +21,27 @@ interface Props {
   onRefetch: () => void
 }
 
-export function PositionsSection({ market, slots, rawBalances, erc20Balances, wrappers, onRefetch }: Props) {
+export function PositionsSection({
+  market,
+  slots,
+  rawBalances,
+  erc20Balances,
+  wrappers,
+  onRefetch,
+}: Props) {
   const { address } = useAccount()
   const { split, isPending: splitting } = useSplit()
   const { wrap, wrapping } = useWrap()
 
   const [mintAmount, setMintAmount] = useState("")
 
-  const hasAnyPosition = rawBalances.some(b => b > 0n) || erc20Balances.some(b => b > 0n)
+  const hasAnyPosition =
+    rawBalances.some((b) => b > 0n) || erc20Balances.some((b) => b > 0n)
 
   const { data: tabBalanceRaw } = useReadContract({
-    address: TABCOIN_ADDRESS, abi: ERC20_ABI, functionName: "balanceOf",
+    address: TABCOIN_ADDRESS,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
     args: address ? [address] : undefined,
     query: { enabled: !!address, staleTime: 15_000 },
   })
@@ -45,7 +53,9 @@ export function PositionsSection({ market, slots, rawBalances, erc20Balances, wr
       await split({ market, tabAmountWei: parseEther(mintAmount) })
       setMintAmount("")
       onRefetch()
-    } catch { /* toast handled */ }
+    } catch {
+      /* toast handled */
+    }
   }
 
   async function handleWrap(i: number) {
@@ -54,7 +64,9 @@ export function PositionsSection({ market, slots, rawBalances, erc20Balances, wr
     try {
       await wrap({ market, indexSet: slots[i].indexSet, amount: raw })
       onRefetch()
-    } catch { /* toast handled */ }
+    } catch {
+      /* toast handled */
+    }
   }
 
   return (
@@ -62,26 +74,43 @@ export function PositionsSection({ market, slots, rawBalances, erc20Balances, wr
       {/* ── Positions ── */}
       <div className="border-t border-border">
         <div className="flex items-center gap-2 px-4 py-2.5">
-          <Layers className="size-3 shrink-0 text-muted-foreground/60" aria-hidden />
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Positions</span>
+          <Layers
+            className="size-3 shrink-0 text-muted-foreground/60"
+            aria-hidden
+          />
+          <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            Positions
+          </span>
         </div>
         {!address ? (
-          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">Connect wallet to see positions.</p>
+          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">
+            Connect wallet to see positions.
+          </p>
         ) : !hasAnyPosition ? (
-          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">No positions yet — mint below.</p>
+          <p className="px-4 pb-4 text-[11px] text-muted-foreground/60">
+            No positions yet — mint below.
+          </p>
         ) : (
           <>
             <div className="grid grid-cols-[52px_1fr_48px_1fr] items-center gap-x-2 px-4 pb-1.5">
               <span />
-              <span className="text-right text-[9px] uppercase tracking-widest text-muted-foreground/40 font-semibold">ERC-1155</span>
+              <span className="text-right text-[9px] font-semibold tracking-widest text-muted-foreground/40 uppercase">
+                ERC-1155
+              </span>
               <span />
-              <span className="text-right text-[9px] uppercase tracking-widest text-muted-foreground/40 font-semibold">ERC-20</span>
+              <span className="text-right text-[9px] font-semibold tracking-widest text-muted-foreground/40 uppercase">
+                ERC-20
+              </span>
             </div>
             <div className="grid grid-cols-[52px_1fr_48px_1fr] items-center gap-x-2 px-4 pb-2">
               <span />
-              <span className="text-right text-[9px] text-muted-foreground/30">raw · illiquid</span>
+              <span className="text-right text-[9px] text-muted-foreground/30">
+                raw · illiquid
+              </span>
               <span />
-              <span className="text-right text-[9px] text-muted-foreground/30">tradeable</span>
+              <span className="text-right text-[9px] text-muted-foreground/30">
+                tradeable
+              </span>
             </div>
             {slots.map((slot, i) => (
               <PositionRow
@@ -102,18 +131,28 @@ export function PositionsSection({ market, slots, rawBalances, erc20Balances, wr
       {/* ── Mint ── */}
       <div className="flex flex-col gap-3 border-t border-border p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Mint</span>
-          <span className="text-[10px] text-muted-foreground/35">1 TAB → 1 YES + 1 NO (ERC-1155)</span>
+          <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            Mint
+          </span>
+          <span className="text-[10px] text-muted-foreground/35">
+            1 TAB → 1 YES + 1 NO (ERC-1155)
+          </span>
         </div>
         <div className="flex gap-2">
           <AmountInput
-            value={mintAmount} onChange={setMintAmount}
-            unit="TAB" label="TABcoin to split into outcome positions"
+            value={mintAmount}
+            onChange={setMintAmount}
+            unit="TAB"
+            label="TABcoin to split into outcome positions"
             disabled={splitting}
           />
           <Button
             onClick={handleMint}
-            disabled={Number(mintAmount) <= 0 || splitting || (tabBalanceNum > 0 && parseFloat(mintAmount) > tabBalanceNum)}
+            disabled={
+              Number(mintAmount) <= 0 ||
+              splitting ||
+              (tabBalanceNum > 0 && parseFloat(mintAmount) > tabBalanceNum)
+            }
             className="shrink-0 active:scale-[0.97]"
           >
             {splitting ? "Minting…" : "Mint"}
@@ -121,27 +160,52 @@ export function PositionsSection({ market, slots, rawBalances, erc20Balances, wr
         </div>
         {tabBalanceNum > 0 && parseFloat(mintAmount) > tabBalanceNum && (
           <InlineWarn variant="error">
-            Nedostatek TAB. Máš {fmtAmt(tabBalanceNum, 2)} TAB
+            Insufficient TAB balance. You have {fmtAmt(tabBalanceNum, 2)} TAB
           </InlineWarn>
         )}
-        {parseFloat(mintAmount) > 0 && parseFloat(mintAmount) <= tabBalanceNum && (
-          <div className="flex flex-wrap items-center gap-1.5 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:duration-150">
-            <span className="text-[10px] text-muted-foreground/50">Získáš</span>
-            {slots.map((slot, i) => {
-              const pal = slotPalette(i, market)
-              return (
-                <span key={slot.label} className="flex items-center gap-1">
-                  <span className={cn("font-mono text-[11px] font-semibold tabular-nums", pal.text)}>{mintAmount}</span>
-                  <span className={cn("text-[10px] font-bold tracking-wide", pal.text)}>{slot.label}</span>
-                  {i < slots.length - 1 && <span className="text-muted-foreground/40 text-[10px] mx-0.5">+</span>}
-                </span>
-              )
-            })}
-            <span className="text-[10px] text-muted-foreground/35">→ Wrap pro obchodování</span>
-          </div>
-        )}
+        {parseFloat(mintAmount) > 0 &&
+          parseFloat(mintAmount) <= tabBalanceNum && (
+            <div className="flex flex-wrap items-center gap-1.5 motion-safe:animate-in motion-safe:duration-150 motion-safe:fade-in-0">
+              <span className="text-[10px] text-muted-foreground/50">
+                You receive
+              </span>
+              {slots.map((slot, i) => {
+                const pal = slotPalette(i, market)
+                return (
+                  <span key={slot.label} className="flex items-center gap-1">
+                    <span
+                      className={cn(
+                        "font-mono text-[11px] font-semibold tabular-nums",
+                        pal.text
+                      )}
+                    >
+                      {mintAmount}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-[10px] font-bold tracking-wide",
+                        pal.text
+                      )}
+                    >
+                      {slot.label}
+                    </span>
+                    {i < slots.length - 1 && (
+                      <span className="mx-0.5 text-[10px] text-muted-foreground/40">
+                        +
+                      </span>
+                    )}
+                  </span>
+                )
+              })}
+              <span className="text-[10px] text-muted-foreground/35">
+                → Wrap to trade
+              </span>
+            </div>
+          )}
         <p className="text-[10px] leading-relaxed text-muted-foreground/35">
-          Raw tokeny nelze obchodovat — použij <strong className="text-muted-foreground/50">Wrap →</strong> výše pro převod na ERC-20.
+          Raw tokens are non-tradeable — use{" "}
+          <strong className="text-muted-foreground/50">Wrap →</strong> above to
+          convert them to ERC-20.
         </p>
       </div>
     </div>
