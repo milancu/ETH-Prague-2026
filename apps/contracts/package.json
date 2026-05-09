@@ -3,7 +3,7 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "dev": "concurrently -k -n \"chain,app\" -c \"yellow,cyan\" \"pnpm run hardhat:chain\" \"pnpm run dev:app\"",
+    "dev": "wait-on tcp:8545 && pnpm run start",
     "dev:app": "wait-on tcp:8545 && pnpm run hardhat:deploy && pnpm run start",
     "account": "pnpm run hardhat:account",
     "account:generate": "pnpm --filter @eth/hardhat run account:generate",

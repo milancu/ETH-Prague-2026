@@ -11,7 +11,13 @@
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\\\\api\" -Recurse)",
       "Bash(Select-Object -ExpandProperty FullName)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\" -Recurse -Directory)",
-      "Bash(Select-Object -First 20)"
+      "Bash(Select-Object -First 20)",
+      "Skill(shadcn)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" -Recurse -Directory)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\" -Recurse -Name)",
+      "Bash(dir C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\\\\scripts *)"
     ]
   },
   "disabledMcpjsonServers": [
