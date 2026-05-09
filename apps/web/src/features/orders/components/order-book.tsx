@@ -94,6 +94,10 @@ const MULTI_PALETTES: Palette[] = [
 ]
 
 const ASK_BAR = "bg-rose-500/[0.08]"
+const BID_BAR = "bg-emerald-500/15"
+const BID_HEADER_BG = "bg-emerald-500/[0.05]"
+const BID_LABEL = "text-emerald-400"
+const BID_SPREAD_LINE = "bg-emerald-500/20"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -401,20 +405,20 @@ function SingleBookView({ book }: { book: Book }) {
                 ? `spread ${(spread * 100).toFixed(1)}¢`
                 : "spread —"}
             </span>
-            <div className={cn("h-px flex-1", palette.spreadLine)} />
+            <div className={cn("h-px flex-1", BID_SPREAD_LINE)} />
           </div>
 
           {/* BID section */}
           <div
             className={cn(
               "border-b border-border/20 px-3 py-0.5",
-              palette.headerBg
+              BID_HEADER_BG
             )}
           >
             <span
               className={cn(
                 "text-[9px] tracking-widest uppercase opacity-40",
-                palette.label
+                BID_LABEL
               )}
             >
               Bid
@@ -435,7 +439,7 @@ function SingleBookView({ book }: { book: Book }) {
                   level={l}
                   maxAmt={maxAmt}
                   side="bid"
-                  barClass={palette.bid}
+                  barClass={BID_BAR}
                   palette={palette}
                 />
               ))

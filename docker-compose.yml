@@ -12,6 +12,8 @@ services:
       RPC_URL_31337: ${RPC_URL_31337:-http://127.0.0.1:8545}
       # Hosts allowed to connect to the MCP transport (comma-separated).
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-api.kowalski-market.com,localhost,127.0.0.1}
+      # Google Gemini API key — required by Kowalsky chat (llm/provider.py).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
     volumes:
       - api_data:/app/data
     ports:
