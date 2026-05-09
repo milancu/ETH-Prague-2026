@@ -163,7 +163,7 @@ def _coerce_articles(raw: list[dict[str, Any]]) -> list[ArticleItem]:
         "Calls `apidojo/twitter-scraper-lite` via x402. "
         "**Paywall: $0.50 USDC on Base mainnet (Phase 3).**"
     ),
-    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:8453"},
+    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:84532"},
 )
 async def get_tweets(body: TweetsRequest) -> TweetsResponse:
     try:
@@ -190,7 +190,7 @@ async def get_tweets(body: TweetsRequest) -> TweetsResponse:
         "Calls `webdatalabs/reddit-scraper-pro` via x402. "
         "**Paywall: $0.50 USDC on Base mainnet (Phase 3).**"
     ),
-    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:8453"},
+    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:84532"},
 )
 async def get_reddit(body: RedditRequest) -> RedditResponse:
     try:
@@ -217,7 +217,7 @@ async def get_reddit(body: RedditRequest) -> RedditResponse:
         "Calls `automation-lab/google-news-scraper` via x402. "
         "**Paywall: $0.50 USDC on Base mainnet (Phase 3).**"
     ),
-    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:8453"},
+    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:84532"},
 )
 async def get_news(body: NewsRequest) -> NewsResponse:
     try:
@@ -245,7 +245,7 @@ async def get_news(body: NewsRequest) -> NewsResponse:
         "LLM-driven sentiment / thesis is added in Phase 3+. "
         "**Paywall: $0.50 USDC on Base mainnet (Phase 3).**"
     ),
-    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:8453"},
+    openapi_extra={"x-x402-price": "$0.50", "x-x402-network": "eip155:84532"},
 )
 async def analyze_market(body: AnalyzeRequest) -> AnalyzeResponse:
     try:
@@ -278,7 +278,7 @@ async def analyze_market(body: AnalyzeRequest) -> AnalyzeResponse:
         "Returns tweet count and top tweet for each supplied market title. "
         "**Paywall: $0.75 USDC on Base mainnet (Phase 3).**"
     ),
-    openapi_extra={"x-x402-price": "$0.75", "x-x402-network": "eip155:8453"},
+    openapi_extra={"x-x402-price": "$0.75", "x-x402-network": "eip155:84532"},
 )
 async def markets_with_buzz(body: MarketBuzzRequest) -> MarketBuzzResponse:
     try:
