@@ -123,3 +123,39 @@ app.mount("/mcp", _mcp_sub_app)
 @app.get("/v1/health", tags=["meta"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
+# Serve integration docs + SKILL.md at /v1/integrations/*
+# ---------------------------------------------------------------------------
+
+_INTEGRATIONS_DIR = os.path.join(
+    os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, os.pardir,
+    "docs", "integrations",
+)
+
+
+@app.get("/v1/integrations", tags=["meta"])
+def list_integrations() -> dict[str, list[str]]:
+    """List available integration guides."""
+    norm = os.path.normpath(_INTEGRATIONS_DIR)
+    if not os.path.isdir(norm):
+        return {"guides": []}
+    files = sorted(f for f in os.listdir(norm) if f.endswith(".md"))
+    return {"guides": files}
+
+
+@app.get("/v1/integrations/{filename}", tags=["meta"])
+def get_integration(filename: str) -> Response:
+    """Serve an integration guide as plain Markdown."""
+    from fastapi import HTTPException
+
+    if not filename.endswith(".md"):
+        raise HTTPException(404, "not found")
+    safe = os.path.basename(filename)
+    path = os.path.normpath(os.path.join(_INTEGRATIONS_DIR, safe))
+    if not os.path.isfile(path):
+        raise HTTPException(404, f"{safe} not found")
+    with open(path) as f:
+        content = f.read()
+    return Response(content=content, media_type="text/markdown; charset=utf-8")

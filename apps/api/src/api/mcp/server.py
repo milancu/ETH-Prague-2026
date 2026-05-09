@@ -69,14 +69,65 @@ for _h in _raw_hosts:
         if ":" not in _h:
             _MCP_ALLOWED_HOSTS.append(f"{_h}:8000")
 
+_INSTRUCTIONS = """\
+Czech prediction-market dApp on Base Sepolia.  You have 16 tools split into \
+three groups: free reads, free calldata builders, and paywalled intelligence.
+
+## Hard rules
+1. Never reference a market, price, or balance you did not get from a tool.
+2. Never propose a transaction without calling a prepare_* tool first.
+3. Reference markets by market_id (e.g. "market #5"), never raw addresses.
+4. Money amounts are TAB (18 decimals). Show human-readable, not wei.
+5. Czech or English — match the user.
+
+## Common workflows
+
+**"What's the bid-ask spread on market X?"**
+→ list_markets to find the market_id
+→ get_market_orderbook(market_id) — returns bids[] and asks[] with prices
+→ spread = lowest ask price − highest bid price
+
+**"Bet 10 TAB on YES in market X"**
+→ list_markets or get_market to confirm market exists and is open
+→ prepare_buy(market_id, slot=0, amount_tab="10000000000000000000", user_address)
+→ return the TxCard for the user to sign
+
+**"Sell my YES tokens at price 0.7"**
+→ get_user_positions(market_id, address) to confirm holdings
+→ prepare_sell(market_id, slot, maker_amount, taker_amount, user_address, expiry)
+→ return the OrderCard — user signs EIP-712, then POST /v1/orders
+
+**"Create a market: will BTC hit 200k by Dec 31?"**
+→ prepare_create_market(name, description, category, outcome_type="binary", ...)
+→ returns TxCard with TAB.approve precondition — user signs both
+
+**"What's my portfolio?"**
+→ get_tab_balance(address) for TAB balance
+→ list_markets to get all markets
+→ get_user_positions(market_id, address) for each relevant market
+
+**"What's the Twitter buzz around market X?" (paywalled $0.50)**
+→ get_market(market_id) to get the title
+→ fetch_tweets(query=title) — costs $0.50 USDC, 402 challenge if unpaid
+
+**"Which markets are trending?" (paywalled $0.75)**
+→ list_markets to get titles
+→ markets_with_buzz(market_titles=[...]) — costs $0.75 USDC
+
+## Signing
+You never sign transactions. prepare_* tools return calldata (TxCard or \
+OrderCard). The user signs in their own wallet. If there are preconditions \
+(requires[]), the user must sign those first, in order.
+
+## x402 paywalled tools
+Tools with x402_price_usd in their metadata cost USDC on Base Sepolia. \
+Without a payment signature, the server returns HTTP 402 with payment \
+requirements. Sign the challenge with an EVM wallet and retry.
+"""
+
 mcp = FastMCP(
     "Prediction Market Agent API",
-    instructions=(
-        "Tools for interacting with a Czech prediction-market dApp on Base Sepolia. "
-        "Free tools: read market data, get orderbook, check balances, build calldata. "
-        "Paywalled tools (marked x402_price_usd): fetch real-time intelligence "
-        "about markets via Apify — pay in USDC on Base Sepolia before calling."
-    ),
+    instructions=_INSTRUCTIONS,
     stateless_http=True,
     streamable_http_path="/",
     transport_security=TransportSecuritySettings(
