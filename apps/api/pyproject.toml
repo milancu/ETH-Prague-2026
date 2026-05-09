@@ -11,6 +11,7 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "sqlmodel>=0.0.38",
     "web3>=7.0.0",
+    "x402[evm,httpx]>=2.9.0",
 ]
 
 [dependency-groups]

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import markets, orders
+from api.routes.intelligence import router as intelligence_router
 from api.routes.markets import balance_router
 from api.routes.prepare import router as prepare_router
 
@@ -38,6 +39,7 @@ app.include_router(markets.router)
 app.include_router(balance_router)
 app.include_router(orders.router)
 app.include_router(prepare_router)
+app.include_router(intelligence_router)
 
 
 @app.get("/health", tags=["meta"])
