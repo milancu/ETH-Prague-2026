@@ -9,6 +9,7 @@ import { Toaster } from "sonner"
 import { useTheme } from "@/components/theme-provider"
 import { AnimatePresence, LayoutGroup, motion } from "motion/react"
 import { Menu, X } from "lucide-react"
+import logoUrl from "@/assets/logo.svg"
 
 const NAV_LINKS = [
   { to: "/", label: "Markets" },
@@ -58,39 +59,46 @@ const RootLayout = () => {
       />
       <div className="flex h-dvh flex-col overflow-hidden">
         <header className="relative z-50 shrink-0 border-b border-border">
-          <div className="container mx-auto flex items-center justify-between px-4 py-3">
-            {/* Desktop nav */}
-            <nav className="hidden items-center gap-6 sm:flex">
-              {NAV_LINKS.map(({ to, label }) => (
-                <Link key={to} to={to} className={NAV_LINK_CLASS}>
-                  {label}
-                </Link>
-              ))}
-            </nav>
+          <div className="container mx-auto flex items-center justify-between gap-4 px-4 py-3">
+            <div className="flex items-center gap-3 sm:gap-6">
+              {/* Mobile hamburger — first on mobile, hidden on desktop */}
+              <button
+                className="-ml-1 p-1 text-muted-foreground transition-colors hover:text-foreground sm:hidden"
+                onClick={() => setMobileOpen((v) => !v)}
+                aria-label={mobileOpen ? "Close menu" : "Open menu"}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.span
+                    key={mobileOpen ? "x" : "menu"}
+                    initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
+                    animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                    exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
+                    transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
+                    className="block"
+                  >
+                    {mobileOpen ? (
+                      <X className="size-5" />
+                    ) : (
+                      <Menu className="size-5" />
+                    )}
+                  </motion.span>
+                </AnimatePresence>
+              </button>
 
-            {/* Mobile hamburger */}
-            <button
-              className="-ml-1 p-1 text-muted-foreground transition-colors hover:text-foreground sm:hidden"
-              onClick={() => setMobileOpen((v) => !v)}
-              aria-label={mobileOpen ? "Close menu" : "Open menu"}
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.span
-                  key={mobileOpen ? "x" : "menu"}
-                  initial={{ opacity: 0, rotate: -90, scale: 0.7 }}
-                  animate={{ opacity: 1, rotate: 0, scale: 1 }}
-                  exit={{ opacity: 0, rotate: 90, scale: 0.7 }}
-                  transition={{ duration: 0.15, ease: [0.23, 1, 0.32, 1] }}
-                  className="block"
-                >
-                  {mobileOpen ? (
-                    <X className="size-5" />
-                  ) : (
-                    <Menu className="size-5" />
-                  )}
-                </motion.span>
-              </AnimatePresence>
-            </button>
+              {/* Logo */}
+              <Link to="/" className="flex shrink-0 items-center" aria-label="Home">
+                <img src={logoUrl} alt="" className="h-7 w-auto" />
+              </Link>
+
+              {/* Desktop nav */}
+              <nav className="hidden items-center gap-6 sm:flex">
+                {NAV_LINKS.map(({ to, label }) => (
+                  <Link key={to} to={to} className={NAV_LINK_CLASS}>
+                    {label}
+                  </Link>
+                ))}
+              </nav>
+            </div>
 
             <ConnectButton />
           </div>

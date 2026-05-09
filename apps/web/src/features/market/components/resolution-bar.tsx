@@ -1,13 +1,12 @@
 import { useState, useMemo } from "react"
 import { ShieldCheck } from "lucide-react"
-import { useAccount } from "wagmi"
+import { useAccount, useReadContract } from "wagmi"
 import { cn } from "@workspace/ui/lib/utils"
 import { Button } from "@workspace/ui/components/button"
 import { useResolveMarket } from "@/features/market/hooks/use-resolve-market"
 import { getOutcomeSlots } from "@/features/positions/lib/utils"
+import { PREDICTION_MARKET_ABI, PREDICTION_MARKET_ADDRESS } from "@/lib/contracts"
 import type { Market } from "@/features/market/types"
-
-const ADMIN_RESOLVER = "0x92e30b6A54911a3385Bcd69F2dEc998A13ef692f"
 
 interface Props {
   market: Market
@@ -18,10 +17,23 @@ export function ResolutionBar({ market }: Props) {
   const slots = getOutcomeSlots(market)
   const [selected, setSelected] = useState<number | null>(null)
 
+  // Authorization is decided by the contract, not the BE. Read on-chain creator/oracle
+  // so the visibility gate matches what `resolveMarket` will actually accept.
+  const { data: onChainMarket } = useReadContract({
+    address: PREDICTION_MARKET_ADDRESS,
+    abi: PREDICTION_MARKET_ABI,
+    functionName: "markets",
+    args: [BigInt(market.marketId)],
+  })
+
+  const onChainCreator = onChainMarket?.[0]
+  const onChainOracle = onChainMarket?.[1]
+
   const canSeeResolver =
     address &&
-    (address.toLowerCase() === market.creator.toLowerCase() ||
-      address.toLowerCase() === ADMIN_RESOLVER.toLowerCase())
+    onChainCreator &&
+    (address.toLowerCase() === onChainCreator.toLowerCase() ||
+      (onChainOracle && address.toLowerCase() === onChainOracle.toLowerCase()))
 
   // Payouts computed at render time so useSimulateContract can react to selection changes
   const payouts = useMemo((): bigint[] => {
