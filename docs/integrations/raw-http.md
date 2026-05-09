@@ -17,7 +17,7 @@ spec. This guide is the recipe.
 - [`foundry`](https://getfoundry.sh) for `cast send`. Optional but recommended.
 
 ```bash
-export API=http://localhost:8000
+export API=https://api.kowalski-market.com  # or http://localhost:8000 for local dev
 export RPC=https://sepolia.base.org
 export PK=0x<your-private-key>     # 0x-prefixed
 export ADDR=$(cast wallet address --private-key $PK)

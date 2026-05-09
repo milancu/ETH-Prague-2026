@@ -13,7 +13,7 @@ pip install httpx 'x402[evm,httpx]>=2.9' eth-account web3
 
 ```python
 import os
-API = os.getenv("API_BASE_URL", "http://localhost:8000")
+API = os.getenv("API_BASE_URL", "https://api.kowalski-market.com")
 PK  = os.environ["BOT_PRIVATE_KEY"]   # 0x-prefixed
 RPC = os.getenv("BASE_RPC_URL", "https://sepolia.base.org")
 ```

@@ -12,10 +12,8 @@ x402 client flow yet, so the Custom GPT can only call free endpoints.
 1. Create a Custom GPT: <https://chatgpt.com/gpts/editor>.
 2. **Configure → Actions → Create new action → Import from URL**:
    ```
-   https://your-api-host/api/openapi.json
+   https://api.kowalski-market.com/api/openapi.json
    ```
-   (locally: `http://localhost:8000/api/openapi.json` — but ChatGPT's
-   Actions need a public URL; use ngrok or a deployed server).
 3. Authentication: **None**. The free endpoints don't need auth.
 4. Save.
 

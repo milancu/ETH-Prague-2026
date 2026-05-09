@@ -15,7 +15,7 @@ Save the snippet below as `~/.openclaw/skills/prediction-market.md`:
 name: prediction-market
 description: Read prediction markets, build betting calldata, and fetch real-time market intelligence on a Czech prediction-market dApp on Base Sepolia.
 endpoints:
-  base_url: ${API_BASE_URL:-http://localhost:8000}
+  base_url: ${API_BASE_URL:-https://api.kowalski-market.com}
 ---
 
 # Prediction Market Skill
