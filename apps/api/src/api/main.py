@@ -62,6 +62,17 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 
 @app.middleware("http")
+async def mcp_trailing_slash(request: Request, call_next: object) -> Response:
+    """Rewrite /mcp → /mcp/ so MCP clients that omit the slash connect."""
+    from collections.abc import Awaitable, Callable
+
+    _call_next: Callable[[Request], Awaitable[Response]] = call_next  # type: ignore[assignment]
+    if request.url.path == "/mcp":
+        request.scope["path"] = "/mcp/"
+    return await _call_next(request)
+
+
+@app.middleware("http")
 async def x402_paywall(
     request: Request,
     call_next: object,
@@ -105,9 +116,7 @@ app.include_router(intelligence_router)
 app.include_router(chat_router)
 
 # Mount FastMCP at /mcp — streamable HTTP transport (modern MCP standard).
-# Clients connect to http://<host>/mcp.
-# FastMCP is configured with streamable_http_path='/' so the sub-app's own
-# route is at '/', which aligns with Starlette's path stripping after mount.
+# Clients connect to http://<host>/mcp or /mcp/.
 app.mount("/mcp", _mcp_sub_app)
 
 
