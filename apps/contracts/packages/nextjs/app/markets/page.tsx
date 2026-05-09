@@ -76,6 +76,41 @@ const PMV2_ADDR = deployedContracts[CHAIN_ID].PredictionMarketV2.address as Addr
 const TAB_ADDR = deployedContracts[CHAIN_ID].TABcoin.address as AddressType;
 const CT_ADDR = deployedContracts[CHAIN_ID].ConditionalTokens.address as AddressType;
 const FACTORY_ADDR = deployedContracts[CHAIN_ID].PositionWrapperFactory.address as AddressType;
+const AMM_ADDR = (deployedContracts[CHAIN_ID] as Record<string, { address: AddressType }>).PredictionAMM
+  ?.address as AddressType;
+
+// Spot price for outcome i derived from FPMM reserves:
+// price_i = Π_{j≠i} R_j / Σ_k Π_{j≠k} R_j (sums to 1 across all outcomes).
+const computeImpliedPrices = (reserves: bigint[]): number[] | null => {
+  const N = reserves.length;
+  if (N === 0 || reserves.some(r => r === 0n)) return null;
+  const numerators: bigint[] = [];
+  let denominator = 0n;
+  for (let k = 0; k < N; k++) {
+    let prod = 1n;
+    for (let j = 0; j < N; j++) {
+      if (j === k) continue;
+      prod *= reserves[j];
+    }
+    numerators.push(prod);
+    denominator += prod;
+  }
+  if (denominator === 0n) return null;
+  return numerators.map(n => Number((n * 10000n) / denominator) / 100);
+};
+
+const erc20ApproveAbi = [
+  {
+    name: "approve",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "spender", type: "address" },
+      { name: "amount", type: "uint256" },
+    ],
+    outputs: [{ name: "", type: "bool" }],
+  },
+] as const;
 
 const wrapAbi = [
   {
@@ -461,6 +496,7 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
             </span>
           ))}
         </div>
+        <MarketPriceBadges marketId={marketId} labels={outcomeLabels} />
         <div className="text-xs opacity-60 space-y-0.5 mt-2">
           <div>category: {category}</div>
           <div className="flex gap-1 items-center">
@@ -494,7 +530,9 @@ const MarketCard = ({ marketId, connected }: { marketId: bigint; connected?: Add
           isOracle={isOracle}
           resolved={resolved}
           canceled={canceled}
+          paused={paused}
           bondAvailable={!bondClaimed && !bondSlashed && bondAmount > 0n}
+          connected={connected}
         />
       </div>
     </div>
@@ -510,7 +548,9 @@ const MarketActions = ({
   isOracle,
   resolved,
   canceled,
+  paused,
   bondAvailable,
+  connected,
 }: {
   marketId: bigint;
   conditionId: `0x${string}`;
@@ -520,7 +560,9 @@ const MarketActions = ({
   isOracle: boolean;
   resolved: boolean;
   canceled: boolean;
+  paused: boolean;
   bondAvailable: boolean;
+  connected?: AddressType;
 }) => {
   const N = Number(outcomeSlotCount);
   const partition = useMemo(() => Array.from({ length: N }, (_, i) => 1n << BigInt(i)), [N]);
@@ -701,6 +743,24 @@ const MarketActions = ({
         </div>
       </details>
 
+      <AmmTradePanel
+        marketId={marketId}
+        outcomeLabels={outcomeLabels}
+        outcomeSlotCount={outcomeSlotCount}
+        resolved={resolved}
+        canceled={canceled}
+        paused={paused}
+      />
+
+      <AmmLiquidityPanel
+        marketId={marketId}
+        outcomeSlotCount={outcomeSlotCount}
+        resolved={resolved}
+        canceled={canceled}
+        paused={paused}
+        connected={connected}
+      />
+
       {isOracle && !resolved && !canceled && (
         <details className="collapse collapse-arrow bg-base-200 mb-2">
           <summary className="collapse-title font-semibold">⚖️ Resolve (oracle only)</summary>
@@ -744,5 +804,358 @@ const MarketActions = ({
         )}
       </div>
     </div>
+  );
+};
+
+const MarketPriceBadges = ({ marketId, labels }: { marketId: bigint; labels: string[] }) => {
+  const { data: reserves } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "getReserves",
+    args: [marketId],
+  });
+  if (!Array.isArray(reserves) || reserves.length !== labels.length) return null;
+  const prices = computeImpliedPrices(reserves as bigint[]);
+  if (!prices) return null;
+  return (
+    <div className="flex gap-1 flex-wrap mt-1">
+      {labels.map((label, i) => (
+        <span key={i} className="badge badge-primary">
+          {label}: {prices[i].toFixed(1)}%
+        </span>
+      ))}
+    </div>
+  );
+};
+
+const AmmTradePanel = ({
+  marketId,
+  outcomeLabels,
+  outcomeSlotCount,
+  resolved,
+  canceled,
+  paused,
+}: {
+  marketId: bigint;
+  outcomeLabels: string[];
+  outcomeSlotCount: bigint;
+  resolved: boolean;
+  canceled: boolean;
+  paused: boolean;
+}) => {
+  const N = Number(outcomeSlotCount);
+  const [mode, setMode] = useState<"buy" | "sell">("buy");
+  const [outcomeIdx, setOutcomeIdx] = useState(0);
+  const [amountStr, setAmountStr] = useState("");
+  const disabled = resolved || canceled || paused;
+
+  const { data: reserves } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "getReserves",
+    args: [marketId],
+  });
+  const { data: wrappers } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "getWrappers",
+    args: [marketId],
+  });
+  const poolExists = Array.isArray(reserves) && reserves.length === N;
+
+  const amountWei = useMemo(() => {
+    if (!amountStr) return 0n;
+    try {
+      return parseEther(amountStr);
+    } catch {
+      return 0n;
+    }
+  }, [amountStr]);
+
+  const quoteFn = mode === "buy" ? "calcBuyAmount" : "calcSellAmount";
+  const { data: quote } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: quoteFn,
+    args: poolExists && amountWei > 0n ? [marketId, outcomeIdx, amountWei] : (undefined as never),
+  });
+
+  const { writeContractAsync: writeTab } = useScaffoldWriteContract({ contractName: "TABcoin" });
+  const { writeContractAsync: writeAmm } = useScaffoldWriteContract({ contractName: "PredictionAMM" });
+
+  const onBuy = async () => {
+    if (!poolExists) return notification.error("Pool ještě neexistuje");
+    if (amountWei === 0n) return notification.error("Zadej částku v TAB");
+    try {
+      await writeTab({ functionName: "approve", args: [AMM_ADDR, amountWei] });
+      await writeAmm({ functionName: "buy", args: [marketId, outcomeIdx, amountWei, 0n] });
+      notification.success(`Buy ${amountStr} TAB → ${outcomeLabels[outcomeIdx]}`);
+      setAmountStr("");
+    } catch (e) {
+      notification.error(getParsedError(e));
+    }
+  };
+
+  const onSell = async () => {
+    if (!poolExists) return notification.error("Pool ještě neexistuje");
+    if (amountWei === 0n) return notification.error("Zadej požadovaný TAB výnos");
+    if (!Array.isArray(wrappers)) return notification.error("Wrappery se ještě nenačetly");
+    if (!quote) return notification.error("Quote se ještě nenačetl");
+    const outcomeIn = (quote as readonly bigint[])[0];
+    const wrapperAddr = (wrappers as AddressType[])[outcomeIdx];
+    try {
+      await wagmiWriteContract(wagmiConfig, {
+        address: wrapperAddr,
+        abi: erc20ApproveAbi,
+        functionName: "approve",
+        args: [AMM_ADDR, outcomeIn],
+      });
+      await writeAmm({ functionName: "sell", args: [marketId, outcomeIdx, amountWei, outcomeIn] });
+      notification.success(`Sell ${outcomeLabels[outcomeIdx]} → ${amountStr} TAB`);
+      setAmountStr("");
+    } catch (e) {
+      notification.error(getParsedError(e));
+    }
+  };
+
+  return (
+    <details className="collapse collapse-arrow bg-base-200 mb-2" open>
+      <summary className="collapse-title font-semibold">🔄 Trade (AMM)</summary>
+      <div className="collapse-content space-y-2">
+        {!poolExists && (
+          <div className="alert alert-info text-sm py-2">
+            Žádný AMM pool. Použij níže „Liquidity (AMM) → Create pool".
+          </div>
+        )}
+        <div role="tablist" className="tabs tabs-boxed w-fit">
+          <button
+            role="tab"
+            className={`tab tab-sm ${mode === "buy" ? "tab-active" : ""}`}
+            onClick={() => setMode("buy")}
+          >
+            Buy
+          </button>
+          <button
+            role="tab"
+            className={`tab tab-sm ${mode === "sell" ? "tab-active" : ""}`}
+            onClick={() => setMode("sell")}
+          >
+            Sell
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            className="select select-bordered select-sm"
+            value={outcomeIdx}
+            onChange={e => setOutcomeIdx(Number(e.target.value))}
+          >
+            {Array.from({ length: N }, (_, i) => (
+              <option key={i} value={i}>
+                {outcomeLabels[i] ?? `slot ${i}`}
+              </option>
+            ))}
+          </select>
+          <input
+            className="input input-bordered input-sm"
+            placeholder={mode === "buy" ? "TAB to spend" : "TAB to receive"}
+            value={amountStr}
+            onChange={e => setAmountStr(e.target.value)}
+          />
+        </div>
+        {poolExists && Array.isArray(quote) && (
+          <div className="text-xs opacity-80">
+            {mode === "buy" ? (
+              <>
+                → receive ~ <b>{Number(formatEther((quote as readonly bigint[])[0])).toFixed(4)}</b>{" "}
+                {outcomeLabels[outcomeIdx]} · fee{" "}
+                {Number(formatEther((quote as readonly bigint[])[1])).toFixed(4)} TAB
+              </>
+            ) : (
+              <>
+                → send ~ <b>{Number(formatEther((quote as readonly bigint[])[0])).toFixed(4)}</b>{" "}
+                {outcomeLabels[outcomeIdx]} · fee{" "}
+                {Number(formatEther((quote as readonly bigint[])[1])).toFixed(4)} TAB
+              </>
+            )}
+          </div>
+        )}
+        <button
+          className={`btn btn-sm ${mode === "buy" ? "btn-primary" : "btn-warning"}`}
+          onClick={mode === "buy" ? onBuy : onSell}
+          disabled={disabled || !poolExists}
+        >
+          {mode === "buy" ? "Approve & Buy" : "Approve & Sell"} {outcomeLabels[outcomeIdx]}
+        </button>
+      </div>
+    </details>
+  );
+};
+
+const AmmLiquidityPanel = ({
+  marketId,
+  outcomeSlotCount,
+  resolved,
+  canceled,
+  paused,
+  connected,
+}: {
+  marketId: bigint;
+  outcomeSlotCount: bigint;
+  resolved: boolean;
+  canceled: boolean;
+  paused: boolean;
+  connected?: AddressType;
+}) => {
+  const N = Number(outcomeSlotCount);
+  const [createFunding, setCreateFunding] = useState("1000");
+  const [createFeePct, setCreateFeePct] = useState("2");
+  const [addAmount, setAddAmount] = useState("");
+  const [removeShares, setRemoveShares] = useState("");
+  const disabled = resolved || canceled || paused;
+
+  const { data: reserves } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "getReserves",
+    args: [marketId],
+  });
+  const { data: shares } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "getShares",
+    args: [marketId, connected ?? zeroAddress],
+  });
+  const { data: pendingFees } = useScaffoldReadContract({
+    contractName: "PredictionAMM",
+    functionName: "pendingFeesOf",
+    args: [marketId, connected ?? zeroAddress],
+  });
+  const poolExists = Array.isArray(reserves) && reserves.length === N;
+
+  const { writeContractAsync: writeTab } = useScaffoldWriteContract({ contractName: "TABcoin" });
+  const { writeContractAsync: writeAmm } = useScaffoldWriteContract({ contractName: "PredictionAMM" });
+
+  const onCreatePool = async () => {
+    try {
+      const funding = parseEther(createFunding);
+      const feePct = Number(createFeePct);
+      if (!Number.isFinite(feePct) || feePct < 0 || feePct > 5) {
+        return notification.error("Fee musí být 0–5 %");
+      }
+      const feeBps = Math.round(feePct * 100);
+      await writeTab({ functionName: "approve", args: [AMM_ADDR, funding] });
+      await writeAmm({ functionName: "createPool", args: [marketId, funding, feeBps] });
+      notification.success(`Pool: ${createFunding} TAB · ${feePct}% (${feeBps} bps)`);
+    } catch (e) {
+      notification.error(getParsedError(e));
+    }
+  };
+
+  const onAddFunding = async () => {
+    if (!addAmount) return notification.error("Zadej částku v TAB");
+    try {
+      const amount = parseEther(addAmount);
+      await writeTab({ functionName: "approve", args: [AMM_ADDR, amount] });
+      await writeAmm({ functionName: "addFunding", args: [marketId, amount, 0n] });
+      notification.success(`Added ${addAmount} TAB`);
+      setAddAmount("");
+    } catch (e) {
+      notification.error(getParsedError(e));
+    }
+  };
+
+  const onRemoveFunding = async () => {
+    if (!removeShares) return notification.error("Zadej kolik shares burnout");
+    try {
+      const sharesIn = parseEther(removeShares);
+      const minOut = Array.from({ length: N }, () => 0n);
+      await writeAmm({ functionName: "removeFunding", args: [marketId, sharesIn, minOut, 0n] });
+      notification.success(`Removed ${removeShares} shares`);
+      setRemoveShares("");
+    } catch (e) {
+      notification.error(getParsedError(e));
+    }
+  };
+
+  const userShares = Array.isArray(shares) ? (shares as readonly bigint[])[0] : 0n;
+  const totalShares = Array.isArray(shares) ? (shares as readonly bigint[])[1] : 0n;
+  const sharePct = totalShares > 0n ? Number((userShares * 10000n) / totalShares) / 100 : 0;
+
+  return (
+    <details className="collapse collapse-arrow bg-base-200 mb-2">
+      <summary className="collapse-title font-semibold">🌊 Liquidity (AMM)</summary>
+      <div className="collapse-content space-y-3">
+        {!poolExists ? (
+          <>
+            <p className="text-sm opacity-70">
+              Pool ještě neexistuje. Vytvoř ho jako první LP — funding se rozdělí 50/50 přes všechny outcome sloty.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <label className="form-control">
+                <span className="label-text text-xs opacity-70 mb-1">Initial funding (TAB)</span>
+                <input
+                  className="input input-bordered input-sm"
+                  inputMode="decimal"
+                  placeholder="e.g. 1000"
+                  value={createFunding}
+                  onChange={e => setCreateFunding(e.target.value)}
+                />
+              </label>
+              <label className="form-control">
+                <span className="label-text text-xs opacity-70 mb-1">Trading fee (%, max 5)</span>
+                <input
+                  className="input input-bordered input-sm"
+                  inputMode="decimal"
+                  placeholder="e.g. 2"
+                  value={createFeePct}
+                  onChange={e => setCreateFeePct(e.target.value)}
+                />
+              </label>
+            </div>
+            <button className="btn btn-primary btn-sm" onClick={onCreatePool} disabled={disabled}>
+              Approve & Create pool
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-xs opacity-80 space-y-0.5">
+              <div>
+                Reserves:{" "}
+                {(reserves as bigint[]).map(r => Number(formatEther(r)).toFixed(2)).join(" / ")} TAB-units
+              </div>
+              <div>Total shares: {Number(formatEther(totalShares)).toFixed(2)}</div>
+              <div>
+                Your shares: {Number(formatEther(userShares)).toFixed(2)} ({sharePct.toFixed(2)}%)
+              </div>
+              <div>Pending fees: {Number(formatEther((pendingFees as bigint) ?? 0n)).toFixed(4)} TAB</div>
+            </div>
+            <div className="grid md:grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Add liquidity</p>
+                <span className="label-text text-xs opacity-70">Amount (TAB)</span>
+                <input
+                  className="input input-bordered input-sm w-full"
+                  inputMode="decimal"
+                  placeholder="e.g. 500"
+                  value={addAmount}
+                  onChange={e => setAddAmount(e.target.value)}
+                />
+                <button className="btn btn-secondary btn-sm" onClick={onAddFunding} disabled={disabled}>
+                  Approve & Add
+                </button>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-semibold">Remove liquidity</p>
+                <span className="label-text text-xs opacity-70">Shares to burn</span>
+                <input
+                  className="input input-bordered input-sm w-full"
+                  inputMode="decimal"
+                  placeholder="e.g. 100"
+                  value={removeShares}
+                  onChange={e => setRemoveShares(e.target.value)}
+                />
+                <button className="btn btn-warning btn-sm" onClick={onRemoveFunding}>
+                  Remove
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </details>
   );
 };
