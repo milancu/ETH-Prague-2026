@@ -10,9 +10,9 @@ sites (docs/agents/ai_layer.md §10).
 from __future__ import annotations
 
 import os
-from typing import Any, cast
+from typing import Any
 
-from api.lib.apify_x402 import ApifyClientError, build_apify_client
+from api.lib.apify_x402 import ApifyClientError, run_actor_x402
 
 _BASE_URL = os.getenv("APIFY_BASE_URL", "https://api.apify.com")
 
@@ -26,29 +26,10 @@ _ACTOR_NEWS = os.getenv(
     "APIFY_ACTOR_NEWS", "automation-lab/google-news-scraper"
 )
 
-# Apify sync endpoint: POST /v2/acts/{actorId}/run-sync-get-dataset-items
-_RUN_SYNC = "/v2/acts/{actor}/run-sync-get-dataset-items"
-
 
 async def _run_actor(actor: str, input_data: dict[str, Any]) -> list[dict[str, Any]]:
     """Run an Apify actor via x402 and return the dataset items."""
-    url = _BASE_URL + _RUN_SYNC.format(actor=actor)
-    async with build_apify_client() as client:
-        response = await client.post(
-            url,
-            json=input_data,
-            timeout=120.0,
-        )
-    if response.status_code != 200:
-        raise ApifyClientError(
-            f"Apify actor {actor!r} returned {response.status_code}: "
-            f"{response.text[:200]}"
-        )
-    data: Any = response.json()
-    # Apify sync endpoint may return items directly or wrapped
-    if isinstance(data, list):
-        return cast(list[dict[str, Any]], data)
-    return cast(list[dict[str, Any]], data.get("items", data.get("data", [])))
+    return await run_actor_x402(_BASE_URL, actor, input_data)
 
 
 # ---------------------------------------------------------------------------
