@@ -7,6 +7,18 @@
       "skillPath": "skills/appkit/SKILL.md",
       "computedHash": "32b308e4d99184d5847569e7c37823333a3fdd91d3218250e7f149cbaa1ad35f"
     },
+    "speech-to-text": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "speech-to-text/SKILL.md",
+      "computedHash": "5f446b460a4ed12b2400256366668c482e266bc3073ac844eb39839f2da7c497"
+    },
+    "text-to-speech": {
+      "source": "elevenlabs/skills",
+      "sourceType": "github",
+      "skillPath": "text-to-speech/SKILL.md",
+      "computedHash": "58648bd4ced042dc17c035505a2984ca82f1a373be68e6e083e0a317b76893a4"
+    },
     "vercel-react-best-practices": {
       "source": "vercel-labs/agent-skills",
       "sourceType": "github",

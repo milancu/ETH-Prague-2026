@@ -18,6 +18,11 @@ services:
       MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-api.kowalski-market.com,localhost,127.0.0.1}
       # Google Gemini API key — required by Kowalsky chat (llm/provider.py).
       GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
+      # ── ElevenLabs voice (STT + TTS) ──────────────────────────────────────
+      # Required by /v1/voice/stt and /v1/voice/tts.
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:?ELEVENLABS_API_KEY is required}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}
+      ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_flash_v2_5}
       # ── ENS integration ───────────────────────────────────────────────────
       ENS_RESOLVER_ADDRESS: ${ENS_RESOLVER_ADDRESS:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
       ENS_REGISTRAR_ADDRESS: ${ENS_REGISTRAR_ADDRESS:-0xC1FF759da5f4f33a63007b668c60074a2a71D56B}
@@ -39,6 +44,12 @@ services:
       PMV2_ADDRESS_84532: ${PMV2_ADDRESS_84532:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
       WRAPPER_FACTORY_ADDRESS_84532: ${WRAPPER_FACTORY_ADDRESS_84532:-0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81}
       TAB_CLOB_ADDRESS_84532: ${TAB_CLOB_ADDRESS_84532:-0xC34715695188b3cE1319C9BF7423713fB3C2A470}
+      # ── CLOB matching tiebreaker ─────────────────────────────────────────
+      # "fifo" or "random" (SpaceComputer cTRNG via public IPNS beacon).
+      CLOB_MATCH_TIEBREAKER: ${CLOB_MATCH_TIEBREAKER:-random}
+      SPACECOMPUTER_API_URL: ${SPACECOMPUTER_API_URL:-https://ipfs.io/ipns/k2k4r8lvomw737sajfnpav0dpeernugnryng50uheyk1k39lursmn09f}
+      SPACECOMPUTER_API_KEY: ${SPACECOMPUTER_API_KEY:-}
+      SPACECOMPUTER_SEED_TTL_S: ${SPACECOMPUTER_SEED_TTL_S:-30}
     volumes:
       - api_data:/app/data
     ports:

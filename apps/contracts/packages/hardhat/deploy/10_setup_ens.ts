@@ -6,6 +6,12 @@ const ENS_REGISTRY_SEPOLIA = "0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e";
 const NAME_WRAPPER_SEPOLIA = "0x0635513f179D50A207757E05759CbD106d7dFcE8";
 
 const setup_ens: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
+  const chainId = await hre.getChainId();
+  if (chainId === "31337") {
+    console.log(`⏭  Skipping ENS setup on chainId=${chainId} (ENS lives on Sepolia).`);
+    return;
+  }
+
   const { deployer } = await hre.getNamedAccounts();
   const { deploy } = hre.deployments;
   const signer = await hre.ethers.getSigner(deployer);

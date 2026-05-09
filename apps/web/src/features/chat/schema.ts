@@ -40,4 +40,7 @@ export interface ChatMessage {
   content: string
   /** Cards attached to an assistant message. */
   txCards?: TxCard[]
+  /** Auto-play TTS once on mount. Set on assistant replies whose preceding
+   *  user message came from voice input. Not persisted to sessionStorage. */
+  autoSpeak?: boolean
 }

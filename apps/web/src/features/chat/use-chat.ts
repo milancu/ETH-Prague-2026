@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { useMutation } from "@tanstack/react-query"
 import { useAccount, useChainId } from "wagmi"
 import { toast } from "sonner"
@@ -25,13 +25,15 @@ function loadInitial(): ChatMessage[] {
   }
 }
 
+export type SendOrigin = "text" | "voice"
+
 function newId(): string {
   return crypto.randomUUID?.() ?? `${Date.now()}-${Math.random()}`
 }
 
 export interface UseChatResult {
   messages: ChatMessage[]
-  send: (content: string) => void
+  send: (content: string, opts?: { origin?: SendOrigin }) => void
   isPending: boolean
   reset: () => void
 }
@@ -41,14 +43,20 @@ export function useChat(): UseChatResult {
   const [messages, setMessages] = useState<ChatMessage[]>(loadInitial)
   const { address } = useAccount()
   const chainId = useChainId()
+  // Origin of the in-flight send. Read in onSuccess to flag the assistant
+  // reply for auto-TTS without round-tripping through state.
+  const pendingOriginRef = useRef<SendOrigin>("text")
 
   // Persist to sessionStorage. Cap at MAX_HISTORY so storage doesn't bloat.
+  // Strip transient flags (autoSpeak) so they don't replay on reload.
   useEffect(() => {
     try {
-      sessionStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify(messages.slice(-MAX_HISTORY)),
-      )
+      const persistable = messages.slice(-MAX_HISTORY).map((m) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { autoSpeak, ...rest } = m
+        return rest
+      })
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(persistable))
     } catch {
       // Quota exceeded or disabled — silently drop.
     }
@@ -65,6 +73,7 @@ export function useChat(): UseChatResult {
       return ChatResponseSchema.parse(res.data)
     },
     onSuccess: (data) => {
+      const autoSpeak = pendingOriginRef.current === "voice"
       setMessages((prev) => [
         ...prev,
         {
@@ -72,6 +81,7 @@ export function useChat(): UseChatResult {
           role: "assistant",
           content: data.text,
           txCards: data.tx_cards.length ? data.tx_cards : undefined,
+          autoSpeak: autoSpeak || undefined,
         },
       ])
     },
@@ -86,9 +96,10 @@ export function useChat(): UseChatResult {
   // StrictMode double-invokes updaters and would fire `mutate` twice.
   const { mutate } = mutation
   const send = useCallback(
-    (content: string) => {
+    (content: string, opts?: { origin?: SendOrigin }) => {
       const trimmed = content.trim()
       if (!trimmed) return
+      pendingOriginRef.current = opts?.origin ?? "text"
       const userMsg: ChatMessage = {
         id: newId(),
         role: "user",

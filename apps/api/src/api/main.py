@@ -20,6 +20,7 @@ from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes.intelligence import router as intelligence_router
 from api.routes.markets import balance_router
 from api.routes.prepare import router as prepare_router
+from api.routes.voice import router as voice_router
 
 load_dotenv()
 
@@ -127,6 +128,7 @@ app.include_router(comments.router)
 app.include_router(prepare_router)
 app.include_router(intelligence_router)
 app.include_router(chat_router)
+app.include_router(voice_router)
 app.include_router(ens_gateway_router)
 app.include_router(ens_discovery_router)
 

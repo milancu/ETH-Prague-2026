@@ -6,6 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "aiosqlite>=0.22.1",
     "alembic>=1.18.4",
+    "elevenlabs>=1.10.0",
     "fastapi[standard]>=0.115.0",
     "google-genai>=1.0.0",
     "greenlet>=3.5.0",

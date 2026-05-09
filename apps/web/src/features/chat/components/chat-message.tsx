@@ -2,6 +2,7 @@ import { motion } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
 import type { ChatMessage } from "../schema"
 import KowalskyMark from "./kowalsky-mark"
+import MessageTtsButton from "./message-tts-button"
 import TxCard from "./tx-card"
 
 const EASE = [0.23, 1, 0.32, 1] as const
@@ -12,6 +13,7 @@ interface Props {
 
 const ChatMessageView = ({ message }: Props) => {
   const isUser = message.role === "user"
+  const canPlay = !isUser && message.content.trim().length > 0
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
@@ -41,6 +43,13 @@ const ChatMessageView = ({ message }: Props) => {
             {message.content}
           </p>
         </div>
+        {canPlay && (
+          <MessageTtsButton
+            text={message.content}
+            autoplay={message.autoSpeak}
+            className="-mt-1"
+          />
+        )}
         {message.txCards?.map((card, i) => (
           <TxCard key={`${message.id}-tx-${i}`} card={card} />
         ))}

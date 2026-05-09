@@ -17,7 +17,11 @@
       "Bash(Select-Object -ExpandProperty Name)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" -Recurse -Directory)",
       "Bash(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\" -Recurse -Name)",
-      "Bash(dir C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\\\\scripts *)"
+      "Bash(dir C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\\\\scripts *)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -sf http://127.0.0.1:8000/v1/health)",
+      "Bash(curl *)",
+      "Bash(pnpm exec *)"
     ]
   },
   "disabledMcpjsonServers": [
