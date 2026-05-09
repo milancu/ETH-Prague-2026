@@ -123,6 +123,7 @@ def build_orderbook(
             "taker_amount": order.taker_amount,
             "price": str(price),
             "expiry": order.expiry,
+            "created_at": order.created_at,
         }
 
         if side == "sell":
@@ -130,10 +131,34 @@ def build_orderbook(
         else:
             bids.append(entry)
 
-    # asks: lowest price first (best ask = cheapest)
-    asks.sort(key=lambda e: Decimal(str(e["price"])))
-    # bids: highest price first (best bid = most generous buyer)
-    bids.sort(key=lambda e: Decimal(str(e["price"])), reverse=True)
+    from api.lib.randomness import FifoSentinel, get_randomness_source
+
+    source = get_randomness_source()
+
+    if isinstance(source, FifoSentinel):
+        asks.sort(key=lambda e: (Decimal(str(e["price"])), e["created_at"]))
+        bids.sort(
+            key=lambda e: (-Decimal(str(e["price"])), e["created_at"])
+        )
+    else:
+        rng = source.fresh_random()
+
+        def _shuffle_by_price(
+            entries: list[dict[str, object]], *, reverse: bool = False
+        ) -> list[dict[str, object]]:
+            by_price: dict[Decimal, list[dict[str, object]]] = {}
+            for entry in entries:
+                p = Decimal(str(entry["price"]))
+                by_price.setdefault(p, []).append(entry)
+            result: list[dict[str, object]] = []
+            for price in sorted(by_price.keys(), reverse=reverse):
+                bucket = by_price[price]
+                rng.shuffle(bucket)
+                result.extend(bucket)
+            return result
+
+        asks = _shuffle_by_price(asks)
+        bids = _shuffle_by_price(bids, reverse=True)
 
     return {"bids": bids, "asks": asks}
 
@@ -162,12 +187,26 @@ def find_best_asks(
             continue
         candidates.append(o)
 
-    # Sort cheapest first: takerAmount/makerAmount ascending
     def _price(o: Order) -> Decimal:
         ma = Decimal(o.maker_amount)
         return Decimal(o.taker_amount) / ma if ma > 0 else Decimal("inf")
 
-    candidates.sort(key=_price)
+    from api.lib.randomness import FifoSentinel, get_randomness_source
+
+    source = get_randomness_source()
+
+    if isinstance(source, FifoSentinel):
+        candidates.sort(key=lambda o: (_price(o), o.created_at))
+    else:
+        rng = source.fresh_random()
+        by_price: dict[Decimal, list[Order]] = {}
+        for o in candidates:
+            by_price.setdefault(_price(o), []).append(o)
+        candidates = []
+        for price in sorted(by_price.keys()):
+            bucket = by_price[price]
+            rng.shuffle(bucket)
+            candidates.extend(bucket)
 
     result: list[tuple[Order, int]] = []
     tab_remaining = amount_tab

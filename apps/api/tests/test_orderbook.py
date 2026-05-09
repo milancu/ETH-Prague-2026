@@ -7,6 +7,7 @@ partial fill accounting, and insufficient-liquidity detection.
 from __future__ import annotations
 
 import time
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from api.llm.tools.orderbook import (
@@ -42,6 +43,7 @@ class _Order:
         maker_amount: str = "10" + "0" * 18,
         taker_amount: str = "6" + "0" * 18,
         expiry: int | None = None,
+        created_at: datetime | None = None,
         market_id: int | None = 1,
         salt: str = "0",
         chain_id: int = 31337,
@@ -56,6 +58,7 @@ class _Order:
         self.maker_amount = maker_amount
         self.taker_amount = taker_amount
         self.expiry = expiry if expiry is not None else int(time.time()) + 3600
+        self.created_at = created_at if created_at is not None else datetime.now(UTC)
         self.market_id = market_id
         self.salt = salt
         self.chain_id = chain_id
