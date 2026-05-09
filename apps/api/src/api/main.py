@@ -104,6 +104,6 @@ app.include_router(intelligence_router)
 app.mount("/mcp", _mcp_sub_app)
 
 
-@app.get("/health", tags=["meta"])
+@app.get("/v1/health", tags=["meta"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
