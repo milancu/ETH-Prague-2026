@@ -57,7 +57,7 @@ class SubnamesResponse(BaseModel):
 )
 async def list_subnames() -> SubnamesResponse:
     registrar_addr = os.getenv("ENS_REGISTRAR_ADDRESS", "")
-    rpc_url = os.getenv("RPC_URL_11155111", "https://rpc.sepolia.org")
+    rpc_url = os.getenv("RPC_URL_11155111", "https://ethereum-sepolia-rpc.publicnode.com")
 
     if not registrar_addr:
         raise HTTPException(

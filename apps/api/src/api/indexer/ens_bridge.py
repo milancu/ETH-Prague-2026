@@ -65,7 +65,7 @@ class ENSBridge:
 
     def __init__(self) -> None:
         base_rpc = os.getenv("RPC_URL_84532", "https://sepolia.base.org")
-        eth_rpc = os.getenv("RPC_URL_11155111", "https://rpc.sepolia.org")
+        eth_rpc = os.getenv("RPC_URL_11155111", "https://ethereum-sepolia-rpc.publicnode.com")
 
         self._base_w3 = Web3(Web3.HTTPProvider(base_rpc))
         self._eth_w3 = Web3(Web3.HTTPProvider(eth_rpc))
