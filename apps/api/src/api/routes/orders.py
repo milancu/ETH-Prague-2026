@@ -104,7 +104,7 @@ class OrderRead(_CamelBase):
     market_id: int | None
 
 
-router = APIRouter(prefix="/orders", tags=["orders"])
+router = APIRouter(prefix="/v1/orders", tags=["free"])
 
 
 @router.post("", response_model=OrderRead, status_code=status.HTTP_201_CREATED)

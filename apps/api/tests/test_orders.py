@@ -55,7 +55,7 @@ async def test_post_creates_order_with_server_generated_id_and_created_at(
 ) -> None:
     payload = _sample_order_payload()
 
-    response = await client.post("/orders", json=payload)
+    response = await client.post("/v1/orders", json=payload)
 
     assert response.status_code == 201, response.text
     body = response.json()
@@ -67,26 +67,26 @@ async def test_post_creates_order_with_server_generated_id_and_created_at(
 
 
 async def test_post_then_get_then_delete_round_trip(client: AsyncClient) -> None:
-    post_resp = await client.post("/orders", json=_sample_order_payload())
+    post_resp = await client.post("/v1/orders", json=_sample_order_payload())
     assert post_resp.status_code == 201
     order_id = post_resp.json()["id"]
 
-    list_resp = await client.get("/orders")
+    list_resp = await client.get("/v1/orders")
     assert list_resp.status_code == 200
     assert any(o["id"] == order_id for o in list_resp.json())
 
-    one_resp = await client.get(f"/orders/{order_id}")
+    one_resp = await client.get(f"/v1/orders/{order_id}")
     assert one_resp.status_code == 200
     assert one_resp.json()["id"] == order_id
 
-    del_resp = await client.delete(f"/orders/{order_id}")
+    del_resp = await client.delete(f"/v1/orders/{order_id}")
     assert del_resp.status_code == 204
 
-    after_resp = await client.get("/orders")
+    after_resp = await client.get("/v1/orders")
     assert after_resp.status_code == 200
     assert all(o["id"] != order_id for o in after_resp.json())
 
-    miss_resp = await client.get(f"/orders/{order_id}")
+    miss_resp = await client.get(f"/v1/orders/{order_id}")
     assert miss_resp.status_code == 404
 
 
@@ -96,7 +96,7 @@ async def test_post_with_truncated_signature_returns_422(
     payload = _sample_order_payload()
     payload["signature"] = "0xdeadbeef"  # too short
 
-    response = await client.post("/orders", json=payload)
+    response = await client.post("/v1/orders", json=payload)
 
     assert response.status_code == 422
     detail = response.json()["detail"]
@@ -107,7 +107,7 @@ async def test_post_round_trips_market_id(client: AsyncClient) -> None:
     payload = _sample_order_payload()
     payload["marketId"] = 7
 
-    response = await client.post("/api/v1/orders", json=payload)
+    response = await client.post("/v1/orders", json=payload)
 
     assert response.status_code == 201, response.text
     assert response.json()["marketId"] == 7
@@ -116,7 +116,7 @@ async def test_post_round_trips_market_id(client: AsyncClient) -> None:
 async def test_post_without_market_id_defaults_to_null(
     client: AsyncClient,
 ) -> None:
-    response = await client.post("/api/v1/orders", json=_sample_order_payload())
+    response = await client.post("/v1/orders", json=_sample_order_payload())
 
     assert response.status_code == 201, response.text
     assert response.json()["marketId"] is None
@@ -130,21 +130,21 @@ async def test_list_filters_by_market_id_and_maker(client: AsyncClient) -> None:
     c = _sample_order_payload() | {"marketId": 1, "maker": other_maker}
 
     for payload in (a, b, c):
-        resp = await client.post("/api/v1/orders", json=payload)
+        resp = await client.post("/v1/orders", json=payload)
         assert resp.status_code == 201, resp.text
 
-    by_market = await client.get("/api/v1/orders", params={"market_id": 1})
+    by_market = await client.get("/v1/orders", params={"market_id": 1})
     assert by_market.status_code == 200
     assert {o["marketId"] for o in by_market.json()} == {1}
     assert len(by_market.json()) == 2
 
-    by_maker = await client.get("/api/v1/orders", params={"maker": other_maker})
+    by_maker = await client.get("/v1/orders", params={"maker": other_maker})
     assert by_maker.status_code == 200
     makers = {o["maker"] for o in by_maker.json()}
     assert makers == {other_maker}
 
     combined = await client.get(
-        "/api/v1/orders", params={"market_id": 1, "maker": other_maker}
+        "/v1/orders", params={"market_id": 1, "maker": other_maker}
     )
     assert combined.status_code == 200
     assert len(combined.json()) == 1
@@ -153,5 +153,5 @@ async def test_list_filters_by_market_id_and_maker(client: AsyncClient) -> None:
 
 
 async def test_list_with_invalid_maker_returns_422(client: AsyncClient) -> None:
-    response = await client.get("/api/v1/orders", params={"maker": "not-an-address"})
+    response = await client.get("/v1/orders", params={"maker": "not-an-address"})
     assert response.status_code == 422

@@ -5,12 +5,25 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from api.routes import markets, orders
+from api.routes.markets import balance_router
+from api.routes.prepare import router as prepare_router
 
 load_dotenv()
 
-app = FastAPI(title="ETH 2026 API", version="0.0.1")
+app = FastAPI(
+    title="Prediction Market Agent API",
+    version="1.0.0",
+    description=(
+        "Agent-agnostic REST API for the Czech prediction-market dApp.  "
+        "Free endpoints: market reads and calldata builders.  "
+        "Paywalled endpoints (Phase 2): intelligence tools behind x402."
+    ),
+    openapi_url="/api/openapi.json",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+)
 
-_cors_origins = os.getenv("CORS_ORIGINS", "https://localhost:5173")
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 _ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",")]
 
 app.add_middleware(
@@ -22,9 +35,11 @@ app.add_middleware(
 )
 
 app.include_router(markets.router)
+app.include_router(balance_router)
 app.include_router(orders.router)
+app.include_router(prepare_router)
 
 
-@app.get("/health")
+@app.get("/health", tags=["meta"])
 def health() -> dict[str, str]:
     return {"status": "ok"}
