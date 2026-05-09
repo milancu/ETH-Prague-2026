@@ -1,13 +1,13 @@
-"""Market metadata endpoints (`/markets`).
+"""Market metadata endpoints (`/v1/markets`) + TAB balance (`/v1/balance`).
 
-Off-chain mirror of on-chain markets. The FE creates a market on-chain via
-`PredictionMarketV2.createMarket`, then POSTs the metadata here once the tx
-confirms. This router stores what it gets, validates shape, and verifies the
-`tx_hash` is mined and successful via `tx_verifier`.
+Off-chain mirror of on-chain markets plus live chain-read endpoints for
+positions and TAB balance.
 """
 
 from __future__ import annotations
 
+import asyncio
+import os
 import re
 from collections.abc import Sequence
 from datetime import UTC, datetime
@@ -19,8 +19,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import col, func, select
 
-from api.db.models import Market
+from api.db.models import Market, Order
 from api.db.session import get_session
+from api.lib.web3_client import get_client
+from api.llm.tools import chain as chain_tools
+from api.llm.tools.chain import get_wrapper_address, index_set_for_slot
+from api.llm.tools.orderbook import build_orderbook
 from api.services.tx_verifier import (
     ALLOWED_CHAINS,
     TxVerificationError,
@@ -36,6 +40,13 @@ _INT64_MAX = (1 << 63) - 1
 
 OutcomeType = Literal["binary", "multi", "scalar"]
 MarketStatus = Literal["pending", "open", "resolved", "cancelled"]
+
+_DEFAULT_CHAIN_ID = int(os.getenv("CHAIN_ID", "31337"))
+
+
+# ---------------------------------------------------------------------------
+# Pydantic models
+# ---------------------------------------------------------------------------
 
 
 class _Outcome(BaseModel):
@@ -93,16 +104,12 @@ class MarketCreate(BaseModel):
     @field_validator("expires_at", "resolution_time")
     @classmethod
     def _to_naive_utc(cls, v: datetime) -> datetime:
-        # SQLite stores naive datetimes; normalize tz-aware input to UTC and
-        # drop the tz so the column write doesn't warn.
         if v.tzinfo is not None:
             v = v.astimezone(UTC).replace(tzinfo=None)
         return v
 
 
 def _isoformat_z(dt: datetime) -> str:
-    # Markets store naive UTC; emit RFC-3339 with `Z` so the FE parses it
-    # as UTC instead of local time.
     if dt.tzinfo is not None:
         dt = dt.astimezone(UTC).replace(tzinfo=None)
     return dt.isoformat(timespec="seconds") + "Z"
@@ -157,13 +164,84 @@ class MarketsListResponse(BaseModel):
     limit: int
 
 
-router = APIRouter(prefix="/markets", tags=["markets"])
+class OrderbookEntry(BaseModel):
+    order_id: str
+    slot: int
+    side: str
+    maker: str
+    maker_amount: str
+    taker_amount: str
+    price: str
+    expiry: int
+
+
+class OrderbookResponse(BaseModel):
+    market_id: int
+    bids: list[OrderbookEntry]
+    asks: list[OrderbookEntry]
+
+
+class PositionEntry(BaseModel):
+    slot: int
+    label: str
+    index_set: int
+    position_id: str
+    wrapper_address: str | None
+    balance_1155: str
+    balance_wrapped: str
+
+
+class PositionsResponse(BaseModel):
+    market_id: int
+    address: str
+    positions: list[PositionEntry]
+
+
+class BalanceResponse(BaseModel):
+    address: str
+    balance: str
+    formatted: str
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+
+def _get_market_or_404(market: Market | None) -> Market:
+    if market is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="market not found"
+        )
+    return market
+
+
+def _outcome_labels(market: Market) -> list[str]:
+    return [str(o.get("label", i)) for i, o in enumerate(market.outcomes)]
+
+
+# ---------------------------------------------------------------------------
+# Routers
+# ---------------------------------------------------------------------------
+
+router = APIRouter(prefix="/v1/markets", tags=["free"])
+balance_router = APIRouter(prefix="/v1/balance", tags=["free"])
+
+
+# ---------------------------------------------------------------------------
+# Market registration (POST) — unchanged behaviour
+# ---------------------------------------------------------------------------
 
 
 @router.post(
     "",
     response_model=MarketCreateResponse,
     status_code=status.HTTP_201_CREATED,
+    summary="Register a confirmed on-chain market",
+    description=(
+        "Store off-chain metadata for a market whose `createMarket` tx has confirmed. "
+        "The `tx_hash` is verified on-chain before insertion."
+    ),
 )
 async def create_market(
     body: MarketCreate,
@@ -194,7 +272,20 @@ async def create_market(
     return market
 
 
-@router.get("", response_model=MarketsListResponse)
+# ---------------------------------------------------------------------------
+# GET /v1/markets — list
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "",
+    response_model=MarketsListResponse,
+    summary="List markets",
+    description=(
+        "Paginated list of registered markets. "
+        "Filter by category, status, or outcome type."
+    ),
+)
 async def list_markets(
     session: AsyncSession = Depends(get_session),
     category: str | None = None,
@@ -234,18 +325,165 @@ async def list_markets(
     )
 
 
-@router.get("/{market_id}", response_model=MarketRead)
+# ---------------------------------------------------------------------------
+# GET /v1/markets/{market_id} — single detail
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{market_id}",
+    response_model=MarketRead,
+    summary="Get market detail",
+    description="Full metadata for one market. `market_id` is the on-chain integer ID.",
+)
 async def get_market(
     market_id: int,
     session: AsyncSession = Depends(get_session),
 ) -> Market:
     stmt = select(Market).where(Market.market_id == market_id)
     market = (await session.execute(stmt)).scalar_one_or_none()
-    if market is None:
+    return _get_market_or_404(market)
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/markets/{market_id}/orderbook
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{market_id}/orderbook",
+    response_model=OrderbookResponse,
+    summary="CLOB order book for a market",
+    description=(
+        "Returns live (non-expired) bids and asks from the off-chain order mempool, "
+        "sorted by price.  On-chain fill/cancel status is NOT verified in Phase 1 — "
+        "assume stale orders may appear."
+    ),
+)
+async def get_market_orderbook(
+    market_id: int,
+    session: AsyncSession = Depends(get_session),
+) -> OrderbookResponse:
+    stmt = select(Market).where(Market.market_id == market_id)
+    market = (await session.execute(stmt)).scalar_one_or_none()
+    _get_market_or_404(market)
+    assert market is not None  # for type narrowing
+
+    orders_stmt = select(Order).where(Order.market_id == market_id)
+    db_orders: list[Order] = list((await session.execute(orders_stmt)).scalars().all())
+
+    client = get_client(market.chain_id)
+    slot_count = len(market.outcomes)
+
+    # Resolve wrapper addresses for each slot — one chain call per slot
+    def _get_wrappers() -> dict[int, str]:
+        result: dict[int, str] = {}
+        for slot in range(slot_count):
+            index_set = index_set_for_slot(slot)
+            addr = get_wrapper_address(client, market.condition_id, index_set)
+            if addr:
+                result[slot] = addr
+        return result
+
+    try:
+        slot_wrapper_map = await asyncio.to_thread(_get_wrappers)
+    except Exception:
+        slot_wrapper_map = {}
+
+    tab_address = client.tab.address.lower()
+    book = build_orderbook(db_orders, tab_address, slot_wrapper_map)
+
+    return OrderbookResponse(
+        market_id=market_id,
+        bids=[OrderbookEntry(**e) for e in book["bids"]],  # type: ignore[arg-type]
+        asks=[OrderbookEntry(**e) for e in book["asks"]],  # type: ignore[arg-type]
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/markets/{market_id}/positions/{address}
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{market_id}/positions/{address}",
+    response_model=PositionsResponse,
+    summary="User positions in a market",
+    description=(
+        "On-chain ERC-1155 and ERC-20 wrapped balances for each outcome slot.  "
+        "Requires a running chain node."
+    ),
+)
+async def get_user_positions(
+    market_id: int,
+    address: str,
+    session: AsyncSession = Depends(get_session),
+) -> PositionsResponse:
+    if not _ADDR_RE.match(address):
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="market not found"
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="address must be a 0x-prefixed 40-hex-char address",
         )
-    return market
+
+    stmt = select(Market).where(Market.market_id == market_id)
+    market = (await session.execute(stmt)).scalar_one_or_none()
+    _get_market_or_404(market)
+    assert market is not None
+
+    client = get_client(market.chain_id)
+    labels = _outcome_labels(market)
+    slot_count = len(market.outcomes)
+
+    try:
+        raw_positions = await asyncio.to_thread(
+            chain_tools.get_user_positions,
+            client,
+            market.condition_id,
+            slot_count,
+            address,
+            labels,
+        )
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"chain read failed: {exc}",
+        ) from exc
+
+    return PositionsResponse(
+        market_id=market_id,
+        address=address.lower(),
+        positions=[PositionEntry(**p) for p in raw_positions],  # type: ignore[arg-type]
+    )
+
+
+# ---------------------------------------------------------------------------
+# GET /v1/balance/{address}
+# ---------------------------------------------------------------------------
+
+
+@balance_router.get(
+    "/{address}",
+    response_model=BalanceResponse,
+    summary="TAB balance",
+    description="Returns raw (wei) and formatted TABcoin balance for an address.",
+)
+async def get_balance(address: str) -> BalanceResponse:
+    if not _ADDR_RE.match(address):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="address must be a 0x-prefixed 40-hex-char address",
+        )
+
+    client = get_client(_DEFAULT_CHAIN_ID)
+    try:
+        result = await asyncio.to_thread(chain_tools.get_tab_balance, client, address)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"chain read failed: {exc}",
+        ) from exc
+
+    return BalanceResponse(address=address.lower(), **result)
 
 
 class MarketStatusUpdate(BaseModel):

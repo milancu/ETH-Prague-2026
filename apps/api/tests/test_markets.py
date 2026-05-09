@@ -92,7 +92,7 @@ async def client() -> AsyncIterator[AsyncClient]:
 async def test_post_creates_market_returns_compact_response(
     client: AsyncClient,
 ) -> None:
-    resp = await client.post("/markets", json=_binary_payload())
+    resp = await client.post("/v1/markets", json=_binary_payload())
 
     assert resp.status_code == 201, resp.text
     body = resp.json()
@@ -105,9 +105,9 @@ async def test_post_creates_market_returns_compact_response(
 async def test_post_normalizes_creator_to_lowercase_and_persists_outcomes(
     client: AsyncClient,
 ) -> None:
-    await client.post("/markets", json=_binary_payload())
+    await client.post("/v1/markets", json=_binary_payload())
 
-    detail = (await client.get("/markets/0")).json()
+    detail = (await client.get("/v1/markets/0")).json()
     assert detail["creator"] == "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
     assert detail["outcomes"] == [{"label": "Yes"}, {"label": "No"}]
     assert detail["status"] == "pending"
@@ -116,28 +116,28 @@ async def test_post_normalizes_creator_to_lowercase_and_persists_outcomes(
 async def test_datetime_fields_serialize_with_utc_z_suffix(
     client: AsyncClient,
 ) -> None:
-    create = (await client.post("/markets", json=_binary_payload())).json()
+    create = (await client.post("/v1/markets", json=_binary_payload())).json()
     assert create["created_at"].endswith("Z")
 
-    detail = (await client.get("/markets/0")).json()
+    detail = (await client.get("/v1/markets/0")).json()
     assert detail["expires_at"] == "2026-12-31T23:59:59Z"
     assert detail["resolution_time"] == "2027-01-01T23:59:59Z"
     assert detail["created_at"].endswith("Z")
 
 
 async def test_post_duplicate_tx_hash_returns_409(client: AsyncClient) -> None:
-    await client.post("/markets", json=_binary_payload())
+    await client.post("/v1/markets", json=_binary_payload())
     dup = await client.post(
-        "/markets", json=_binary_payload(market_id=99)
+        "/v1/markets", json=_binary_payload(market_id=99)
     )
     assert dup.status_code == 409
     assert dup.json()["detail"] == "market already exists"
 
 
 async def test_post_duplicate_market_id_returns_409(client: AsyncClient) -> None:
-    await client.post("/markets", json=_binary_payload())
+    await client.post("/v1/markets", json=_binary_payload())
     dup = await client.post(
-        "/markets",
+        "/v1/markets",
         json=_binary_payload(
             tx_hash="0x" + "cd" * 32,
             condition_id="0x" + "9a" * 32,
@@ -147,13 +147,13 @@ async def test_post_duplicate_market_id_returns_409(client: AsyncClient) -> None
 
 
 async def test_post_rejects_unknown_chain_id_with_422(client: AsyncClient) -> None:
-    resp = await client.post("/markets", json=_binary_payload(chain_id=1))
+    resp = await client.post("/v1/markets", json=_binary_payload(chain_id=1))
     assert resp.status_code == 422
 
 
 async def test_post_rejects_bad_condition_id_with_422(client: AsyncClient) -> None:
     resp = await client.post(
-        "/markets", json=_binary_payload(condition_id="0xdeadbeef")
+        "/v1/markets", json=_binary_payload(condition_id="0xdeadbeef")
     )
     assert resp.status_code == 422
 
@@ -163,7 +163,7 @@ async def test_post_rejects_failing_tx_verification_with_400(
 ) -> None:
     app.dependency_overrides[get_tx_verifier] = lambda: _fail_verifier
     try:
-        resp = await client.post("/markets", json=_binary_payload())
+        resp = await client.post("/v1/markets", json=_binary_payload())
     finally:
         app.dependency_overrides[get_tx_verifier] = lambda: _ok_verifier
     assert resp.status_code == 400
@@ -171,7 +171,7 @@ async def test_post_rejects_failing_tx_verification_with_400(
 
 
 async def test_get_market_not_found_returns_404(client: AsyncClient) -> None:
-    resp = await client.get("/markets/999")
+    resp = await client.get("/v1/markets/999")
     assert resp.status_code == 404
     assert resp.json()["detail"] == "market not found"
 
@@ -179,9 +179,9 @@ async def test_get_market_not_found_returns_404(client: AsyncClient) -> None:
 async def test_list_markets_filters_by_category_and_paginates(
     client: AsyncClient,
 ) -> None:
-    await client.post("/markets", json=_binary_payload())
+    await client.post("/v1/markets", json=_binary_payload())
     await client.post(
-        "/markets",
+        "/v1/markets",
         json=_binary_payload(
             market_id=1,
             tx_hash="0x" + "11" * 32,
@@ -190,7 +190,7 @@ async def test_list_markets_filters_by_category_and_paginates(
         ),
     )
     await client.post(
-        "/markets",
+        "/v1/markets",
         json=_scalar_payload(
             market_id=2,
             tx_hash="0x" + "33" * 32,
@@ -198,24 +198,24 @@ async def test_list_markets_filters_by_category_and_paginates(
         ),
     )
 
-    all_resp = await client.get("/markets")
+    all_resp = await client.get("/v1/markets")
     assert all_resp.status_code == 200
     all_body = all_resp.json()
     assert all_body["total"] == 3
     assert all_body["page"] == 1
     assert all_body["limit"] == 20
 
-    finance_resp = await client.get("/markets?category=Finance")
+    finance_resp = await client.get("/v1/markets?category=Finance")
     finance_body = finance_resp.json()
     assert finance_body["total"] == 2
     assert {m["category"] for m in finance_body["markets"]} == {"Finance"}
 
-    scalar_resp = await client.get("/markets?outcome_type=scalar")
+    scalar_resp = await client.get("/v1/markets?outcome_type=scalar")
     scalar_body = scalar_resp.json()
     assert scalar_body["total"] == 1
     assert scalar_body["markets"][0]["scalar_min"] == 500.0
 
-    page_resp = await client.get("/markets?limit=2&page=2")
+    page_resp = await client.get("/v1/markets?limit=2&page=2")
     page_body = page_resp.json()
     assert page_body["total"] == 3
     assert page_body["limit"] == 2
