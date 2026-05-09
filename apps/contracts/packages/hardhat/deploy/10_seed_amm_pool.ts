@@ -34,6 +34,14 @@ const seed_amm_pool: DeployFunction = async function (hre: HardhatRuntimeEnviron
   let marketId: bigint;
 
   if (marketCount === 0n) {
+    // Pokud má PMv2 nenulový defaultBond, musíme předem approvenout TAB pro bond.
+    const defaultBond = await PMV2.defaultBond();
+    if (defaultBond > 0n) {
+      console.log(`💵 Approving ${defaultBond / 10n ** 18n} TAB bond to PMv2…`);
+      const bondApproveTx = await TAB.approve(pmv2.address, defaultBond, { gasLimit: 100_000 });
+      await bondApproveTx.wait();
+    }
+
     console.log("📝 Creating sample binary market…");
     const now = Math.floor(Date.now() / 1000);
     const tx = await PMV2.createMarket(
