@@ -35,9 +35,10 @@ interface OrderRowProps {
   order: Order
   market?: Market
   isOwn: boolean
+  outcomeLabel?: string
 }
 
-export function OrderRow({ order, market, isOwn }: OrderRowProps) {
+export function OrderRow({ order, market, isOwn, outcomeLabel }: OrderRowProps) {
   const { mutate: deleteOrder, isPending: isCancelling } = useDeleteOrder()
   const { fillOrder, isPending: isFilling } = useFillOrder()
   const isPending = isCancelling || isFilling
@@ -91,6 +92,18 @@ export function OrderRow({ order, market, isOwn }: OrderRowProps) {
               >
                 {market.title}
               </Link>
+              {outcomeLabel && (
+                <span className={cn(
+                  "shrink-0 px-1 py-0.5 text-[9px] font-bold tracking-widest uppercase",
+                  outcomeLabel === "YES"
+                    ? "bg-emerald-500/10 text-emerald-400"
+                    : outcomeLabel === "NO"
+                      ? "bg-rose-500/10 text-rose-400"
+                      : "bg-muted/30 text-muted-foreground",
+                )}>
+                  {outcomeLabel}
+                </span>
+              )}
               <span className={cn(
                 "shrink-0 px-1 py-0.5 text-[9px] font-bold tracking-widest uppercase",
                 CATEGORY_BADGE[market.category],

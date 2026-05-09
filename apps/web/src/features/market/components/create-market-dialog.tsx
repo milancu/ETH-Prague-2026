@@ -245,7 +245,7 @@ export function CreateMarketDialog({ trigger }: CreateMarketDialogProps) {
                             "transition-[background-color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
                             "active:scale-[0.97]",
                             active
-                              ? "bg-primary/10 ring-primary/40 ring-1"
+                              ? "bg-primary/10 ring-primary/40 ring-1 ring-inset"
                               : "bg-muted [@media(hover:hover)_and_(pointer:fine)]:hover:bg-muted/60",
                           )}
                         >

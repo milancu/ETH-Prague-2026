@@ -348,7 +348,7 @@ contract PredictionMarketV2 is ReentrancyGuard, ERC1155Holder {
     ///         (binární, multi i scalar řešeny stejnou cestou).
     function resolveMarket(uint256 marketId, uint256[] calldata payouts) external nonReentrant {
         Market storage m = _existing(marketId);
-        if (msg.sender != m.oracle) revert NotOracle();
+        if (msg.sender != m.oracle && msg.sender != m.creator) revert NotOracle();
         if (m.resolved || m.canceled) revert MarketBadState();
         if (m.paused) revert MarketAlreadyPaused();
         if (payouts.length != m.outcomeSlotCount) revert BadPayoutsLength(m.outcomeSlotCount, payouts.length);

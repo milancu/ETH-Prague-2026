@@ -1,9 +1,17 @@
 import { useMemo } from "react"
-import { useAccount } from "wagmi"
+import { useAccount, useReadContracts } from "wagmi"
 import { useOrders } from "@/features/orders/hooks/use-orders"
 import { useMarkets } from "@/features/market/hooks/use-markets"
 import { OrderRow } from "@/features/orders/components/order-row"
+import { getOutcomeSlots } from "@/features/positions/lib/utils"
+import {
+  FACTORY_ABI,
+  POSITION_WRAPPER_FACTORY_ADDRESS,
+  TABCOIN_ADDRESS,
+} from "@/lib/contracts"
 import type { Market } from "@/features/market/types"
+
+const TAB = TABCOIN_ADDRESS.toLowerCase()
 
 export function MyOrders() {
   const { address, isConnected } = useAccount()
@@ -19,6 +27,54 @@ export function MyOrders() {
     }
     return map
   }, [marketPage])
+
+  // Build a list of (conditionId, indexSet, label) for every slot in every market
+  // that appears in the user's orders, so we can map wrapper address → outcome label.
+  const wrapperContracts = useMemo(() => {
+    const entries: {
+      label: string
+      conditionId: `0x${string}`
+      indexSet: bigint
+    }[] = []
+    const seen = new Set<number>()
+    for (const order of orders) {
+      if (order.marketId == null || seen.has(order.marketId)) continue
+      seen.add(order.marketId)
+      const market = marketById.get(order.marketId)
+      if (!market) continue
+      for (const slot of getOutcomeSlots(market)) {
+        entries.push({
+          label: slot.label,
+          conditionId: market.conditionId as `0x${string}`,
+          indexSet: slot.indexSet,
+        })
+      }
+    }
+    return entries
+  }, [orders, marketById])
+
+  const { data: wrapperResults } = useReadContracts({
+    contracts: wrapperContracts.map(({ conditionId, indexSet }) => ({
+      address: POSITION_WRAPPER_FACTORY_ADDRESS,
+      abi: FACTORY_ABI,
+      functionName: "getWrapper" as const,
+      args: [TABCOIN_ADDRESS, conditionId, indexSet] as const,
+    })),
+    query: { enabled: wrapperContracts.length > 0, staleTime: 30_000 },
+  })
+
+  // wrapperAddress.toLowerCase() → outcome label (e.g. "YES", "NO")
+  const wrapperLabelMap = useMemo((): Map<string, string> => {
+    const map = new Map<string, string>()
+    if (!wrapperResults) return map
+    for (let i = 0; i < wrapperContracts.length; i++) {
+      const raw = wrapperResults[i]?.result as `0x${string}` | undefined
+      if (raw && BigInt(raw) !== 0n) {
+        map.set(raw.toLowerCase(), wrapperContracts[i].label)
+      }
+    }
+    return map
+  }, [wrapperResults, wrapperContracts])
 
   if (!isConnected) {
     return (
@@ -59,14 +115,20 @@ export function MyOrders() {
         <div className="w-[22px] shrink-0" />
       </div>
 
-      {orders.map((order) => (
-        <OrderRow
-          key={order.id}
-          order={order}
-          market={order.marketId != null ? marketById.get(order.marketId) : undefined}
-          isOwn
-        />
-      ))}
+      {orders.map((order) => {
+        const outcomeToken = order.makerToken.toLowerCase() === TAB
+          ? order.takerToken.toLowerCase()
+          : order.makerToken.toLowerCase()
+        return (
+          <OrderRow
+            key={order.id}
+            order={order}
+            market={order.marketId != null ? marketById.get(order.marketId) : undefined}
+            isOwn
+            outcomeLabel={wrapperLabelMap.get(outcomeToken)}
+          />
+        )
+      })}
     </div>
   )
 }

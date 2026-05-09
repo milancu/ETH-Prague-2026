@@ -33,11 +33,14 @@ export const POSITION_WRAPPER_FACTORY_ADDRESS = addr(
   "0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81",
 )
 
-// Hardhat account[0] — deployer on local; update via VITE_DEFAULT_ORACLE for other networks.
-export const DEFAULT_ORACLE = addr(
-  "VITE_DEFAULT_ORACLE",
-  "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-)
+// Set VITE_DEFAULT_ORACLE in .env.local (local: auto-written by deploy script via ORACLE_ADDRESS).
+// For Sepolia/mainnet: set it in your deployment environment (Vercel env vars etc.).
+// Never leave this unset in production — use a wallet you control or a Gnosis Safe.
+const _oracle = import.meta.env.VITE_DEFAULT_ORACLE as string | undefined
+if (!_oracle && import.meta.env.PROD) {
+  console.error("[contracts] VITE_DEFAULT_ORACLE is not set. Markets cannot be created or resolved.")
+}
+export const DEFAULT_ORACLE = (_oracle ?? "0x92e30b6A54911a3385Bcd69F2dEc998A13ef692f") as `0x${string}`
 
 export const DEFAULT_BOND = parseEther("50")
 
@@ -223,6 +226,20 @@ export const TABCLOB_ABI = [
       { name: "signature",       type: "bytes"   },
     ],
     outputs: [],
+  },
+  {
+    name: "filledMakerAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "orderHash", type: "bytes32" }],
+    outputs: [{ name: "", type: "uint128" }],
+  },
+  {
+    name: "hashOrder",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "o", type: "tuple", components: ORDER_COMPONENTS }],
+    outputs: [{ name: "", type: "bytes32" }],
   },
 ] as const
 
