@@ -266,11 +266,11 @@ For each major platform, we ship **one short markdown recipe** under `docs/integ
 
 | Guide | Target platform | Status |
 |---|---|---|
-| `docs/integrations/openclaw.md` | OpenClaw (`SKILL.md` format) | TODO |
-| `docs/integrations/claude-code.md` | Claude Code (skill + MCP) | TODO |
-| `docs/integrations/openai-gpt.md` | ChatGPT Custom GPT (Actions) | TODO |
-| `docs/integrations/python-bot.md` | Autonomous Python bot | TODO |
-| `docs/integrations/raw-http.md` | Plain `curl` walkthrough | TODO |
+| [`docs/integrations/openclaw.md`](../integrations/openclaw.md) | OpenClaw (`SKILL.md` format) | done |
+| [`docs/integrations/claude-code.md`](../integrations/claude-code.md) | Claude Code (MCP) | done |
+| [`docs/integrations/openai-gpt.md`](../integrations/openai-gpt.md) | ChatGPT Custom GPT (Actions) | done |
+| [`docs/integrations/python-bot.md`](../integrations/python-bot.md) | Autonomous Python bot | done |
+| [`docs/integrations/raw-http.md`](../integrations/raw-http.md) | Plain `curl` walkthrough | done |
 
 We write these only after Tier 1+2 backend is green. Each guide is ~100 lines.
 
