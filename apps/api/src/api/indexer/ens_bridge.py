@@ -148,7 +148,7 @@ class ENSBridge:
 
     async def _handle_market_created(self, from_block: int, to_block: int) -> None:
         events = self._pmv2.events.MarketCreated().get_logs(
-            fromBlock=from_block, toBlock=to_block
+            from_block=from_block, to_block=to_block
         )
         for event in events:
             market_id = event.args["marketId"]
@@ -206,7 +206,7 @@ class ENSBridge:
 
     async def _handle_market_resolved(self, from_block: int, to_block: int) -> None:
         events = self._pmv2.events.MarketResolved().get_logs(
-            fromBlock=from_block, toBlock=to_block
+            from_block=from_block, to_block=to_block
         )
         for event in events:
             market_id = event.args["marketId"]
@@ -241,7 +241,7 @@ class ENSBridge:
 
     async def _handle_market_canceled(self, from_block: int, to_block: int) -> None:
         events = self._pmv2.events.MarketCanceled().get_logs(
-            fromBlock=from_block, toBlock=to_block
+            from_block=from_block, to_block=to_block
         )
         for event in events:
             market_id = event.args["marketId"]
