@@ -74,9 +74,17 @@ class TxCardResponse(TxStep):
     notice: str | None = None
 
 
+class IntelligenceRequestResponse(BaseModel):
+    tool: str
+    args: dict[str, object]
+    price_usd: float
+    endpoint: str
+
+
 class ChatResponse(BaseModel):
     text: str
     tx_cards: list[TxCardResponse]
+    intelligence_request: IntelligenceRequestResponse | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -153,4 +161,12 @@ async def chat(
 
     result: ChatResult = await run_chat(messages, ctx)
 
-    return ChatResponse(text=result.text, tx_cards=result.tx_cards)
+    return ChatResponse(
+        text=result.text,
+        tx_cards=result.tx_cards,
+        intelligence_request=(
+            IntelligenceRequestResponse(**result.intelligence_request)
+            if result.intelligence_request is not None
+            else None
+        ),
+    )
