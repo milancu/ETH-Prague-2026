@@ -76,11 +76,25 @@ SYSTEM_PROMPT = (
 )
 
 
-def build_system_prompt(user_address: str | None = None) -> str:
-    """Build the system prompt, optionally injecting the user's address."""
+def build_system_prompt(ctx: ToolContext) -> str:
+    """Build the system prompt, injecting user + optional market context."""
     prompt = SYSTEM_PROMPT
-    if user_address:
-        prompt += f"\n\nThe current user's wallet address is: {user_address}"
+    if ctx.user_address:
+        prompt += f"\n\nThe current user's wallet address is: {ctx.user_address}"
+    if ctx.market_context is not None:
+        m = ctx.market_context
+        labels = ", ".join(str(label) for label in m.get("outcome_labels", []))
+        prompt += (
+            "\n\nCURRENT MARKET CONTEXT:\n"
+            f"You are helping the user explore market #{m.get('market_id')}:\n"
+            f"  Title: \"{m.get('title')}\"\n"
+            f"  Category: {m.get('category')}\n"
+            f"  Outcome type: {m.get('outcome_type')} ({labels})\n"
+            f"  Status: {m.get('status')}\n"
+            f"  Expires: {m.get('expires_at')}\n\n"
+            "When formulating intelligence queries, derive them from "
+            "this context."
+        )
     return prompt
 
 
@@ -105,7 +119,7 @@ async def run_chat(
     tool_map = get_tool_map()
     gemini_tools = get_gemini_tools()
 
-    system_prompt = build_system_prompt(ctx.user_address)
+    system_prompt = build_system_prompt(ctx)
 
     contents: list[types.Content] = []
     for msg in messages:

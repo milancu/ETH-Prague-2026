@@ -3,12 +3,23 @@
 from __future__ import annotations
 
 from typing import Any
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 
 from api.llm.provider import ChatResult, build_system_prompt
+from api.llm.tool_registry import ToolContext
+
+
+def _ctx(**overrides: object) -> ToolContext:
+    base: dict[str, object] = {
+        "session": MagicMock(),
+        "client": MagicMock(),
+        "chain_id": 31337,
+    }
+    base.update(overrides)
+    return ToolContext(**base)  # type: ignore[arg-type]
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +107,7 @@ async def test_chat_with_tx_card(
 
 @pytest.mark.asyncio
 async def test_system_prompt_contains_hard_rules() -> None:
-    prompt = build_system_prompt()
+    prompt = build_system_prompt(_ctx())
     assert "HARD RULES" in prompt
     assert "Never reference a market" in prompt
     assert "Never propose a transaction without first calling a `prepare_*` tool" in prompt
@@ -107,7 +118,7 @@ async def test_system_prompt_contains_hard_rules() -> None:
 @pytest.mark.asyncio
 async def test_system_prompt_includes_user_address() -> None:
     addr = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd"
-    prompt = build_system_prompt(user_address=addr)
+    prompt = build_system_prompt(_ctx(user_address=addr))
     assert addr in prompt
 
 
