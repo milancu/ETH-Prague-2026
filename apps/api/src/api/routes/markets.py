@@ -21,7 +21,7 @@ from sqlmodel import col, func, select
 
 from api.db.models import Market, Order
 from api.db.session import get_session
-from api.lib.ens import ens_name_for
+from api.lib.ens import ens_analysis_name_for, ens_name_for
 from api.lib.web3_client import get_client
 from api.llm.tools import chain as chain_tools
 from api.llm.tools.chain import get_wrapper_address, index_set_for_slot
@@ -144,6 +144,11 @@ class MarketRead(BaseModel):
     @property
     def ens_name(self) -> str:
         return ens_name_for(self.market_id, self.title)
+
+    @computed_field  # type: ignore[misc]
+    @property
+    def ens_analysis_name(self) -> str:
+        return ens_analysis_name_for(self.market_id, self.title)
 
     @field_serializer("expires_at", "resolution_time", "created_at")
     def _serialize_dt(self, v: datetime) -> str:
