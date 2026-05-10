@@ -21,7 +21,8 @@
       "Bash(pnpm dev *)",
       "Bash(curl -sf http://127.0.0.1:8000/v1/health)",
       "Bash(curl *)",
-      "Bash(pnpm exec *)"
+      "Bash(pnpm exec *)",
+      "Bash(pnpm lint *)"
     ]
   },
   "disabledMcpjsonServers": [

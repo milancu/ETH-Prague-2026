@@ -368,6 +368,32 @@ export const PREDICTION_AMM_ABI = [
     outputs: [{ name: "sharesMinted", type: "uint256" }],
   },
   {
+    name: "addFunding",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",     type: "uint256" },
+      { name: "amount",       type: "uint256" },
+      { name: "minSharesOut", type: "uint256" },
+    ],
+    outputs: [{ name: "sharesMinted", type: "uint256" }],
+  },
+  {
+    name: "removeFunding",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "marketId",      type: "uint256"   },
+      { name: "sharesIn",      type: "uint256"   },
+      { name: "minOutcomeOut", type: "uint256[]" },
+      { name: "minFeeOut",     type: "uint256"   },
+    ],
+    outputs: [
+      { name: "outcomeOut", type: "uint256[]" },
+      { name: "feeOut",     type: "uint256"   },
+    ],
+  },
+  {
     name: "buy",
     type: "function",
     stateMutability: "nonpayable",
@@ -399,6 +425,64 @@ export const PREDICTION_AMM_ABI = [
     outputs: [{ name: "", type: "uint256[]" }],
   },
   {
+    name: "getWrappers",
+    type: "function",
+    stateMutability: "view",
+    inputs: [{ name: "marketId", type: "uint256" }],
+    outputs: [{ name: "", type: "address[]" }],
+  },
+  {
+    name: "getShares",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "marketId", type: "uint256" },
+      { name: "user",     type: "address" },
+    ],
+    outputs: [
+      { name: "shares",      type: "uint256" },
+      { name: "totalShares", type: "uint256" },
+    ],
+  },
+  {
+    name: "pendingFeesOf",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "marketId", type: "uint256" },
+      { name: "user",     type: "address" },
+    ],
+    outputs: [{ name: "", type: "uint256" }],
+  },
+  {
+    name: "calcBuyAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "marketId",         type: "uint256" },
+      { name: "outcomeIndex",     type: "uint8"   },
+      { name: "investmentAmount", type: "uint256" },
+    ],
+    outputs: [
+      { name: "outcomeOut", type: "uint256" },
+      { name: "feeAmount",  type: "uint256" },
+    ],
+  },
+  {
+    name: "calcSellAmount",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "marketId",     type: "uint256" },
+      { name: "outcomeIndex", type: "uint8"   },
+      { name: "returnAmount", type: "uint256" },
+    ],
+    outputs: [
+      { name: "outcomeIn", type: "uint256" },
+      { name: "feeAmount", type: "uint256" },
+    ],
+  },
+  {
     name: "getPool",
     type: "function",
     stateMutability: "view",
@@ -418,6 +502,63 @@ export const PREDICTION_AMM_ABI = [
           { name: "wrappers",         type: "address[]" },
         ],
       },
+    ],
+  },
+  {
+    name: "PoolCreated",
+    type: "event",
+    inputs: [
+      { name: "marketId",         type: "uint256", indexed: true  },
+      { name: "creator",          type: "address", indexed: true  },
+      { name: "feeBps",           type: "uint16",  indexed: false },
+      { name: "initialFunding",   type: "uint256", indexed: false },
+      { name: "outcomeSlotCount", type: "uint8",   indexed: false },
+    ],
+  },
+  {
+    name: "FundingAdded",
+    type: "event",
+    inputs: [
+      { name: "marketId",      type: "uint256",   indexed: true  },
+      { name: "funder",        type: "address",   indexed: true  },
+      { name: "amountIn",      type: "uint256",   indexed: false },
+      { name: "sharesMinted",  type: "uint256",   indexed: false },
+      { name: "reservesAfter", type: "uint256[]", indexed: false },
+    ],
+  },
+  {
+    name: "FundingRemoved",
+    type: "event",
+    inputs: [
+      { name: "marketId",     type: "uint256",   indexed: true  },
+      { name: "funder",       type: "address",   indexed: true  },
+      { name: "sharesBurned", type: "uint256",   indexed: false },
+      { name: "outcomeOut",   type: "uint256[]", indexed: false },
+      { name: "feeOut",       type: "uint256",   indexed: false },
+    ],
+  },
+  {
+    name: "Bought",
+    type: "event",
+    inputs: [
+      { name: "marketId",         type: "uint256", indexed: true  },
+      { name: "buyer",            type: "address", indexed: true  },
+      { name: "outcomeIndex",     type: "uint8",   indexed: false },
+      { name: "investmentAmount", type: "uint256", indexed: false },
+      { name: "feeAmount",        type: "uint256", indexed: false },
+      { name: "outcomeOut",       type: "uint256", indexed: false },
+    ],
+  },
+  {
+    name: "Sold",
+    type: "event",
+    inputs: [
+      { name: "marketId",     type: "uint256", indexed: true  },
+      { name: "seller",       type: "address", indexed: true  },
+      { name: "outcomeIndex", type: "uint8",   indexed: false },
+      { name: "returnAmount", type: "uint256", indexed: false },
+      { name: "feeAmount",    type: "uint256", indexed: false },
+      { name: "outcomeIn",    type: "uint256", indexed: false },
     ],
   },
 ] as const

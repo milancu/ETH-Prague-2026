@@ -186,7 +186,7 @@ const RootLayout = () => {
                 className="shrink-0 border-t border-border"
                 style={{ height: "var(--footer-h)" }}
               >
-                <div className="container mx-auto flex h-full items-center px-4">
+                <div className="container mx-auto flex h-full items-center justify-between gap-4 px-4">
                   <p className="text-xs text-muted-foreground">
                     Backend: {isLoading && <span>checking…</span>}
                     {isError && (
@@ -204,6 +204,19 @@ const RootLayout = () => {
                       </span>
                     )}
                   </p>
+                  <div className="flex items-center gap-4">
+                    <p className="hidden text-xs text-muted-foreground sm:block">
+                      Penguins × Claude
+                    </p>
+                    <a
+                      href="https://api.kowalski-market.com/v1/integrations"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs font-medium text-muted-foreground transition-colors duration-150 hover:text-foreground"
+                    >
+                      Developers
+                    </a>
+                  </div>
                 </div>
               </footer>
             </div>

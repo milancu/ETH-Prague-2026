@@ -21,6 +21,7 @@ import { TradeNowPanel } from "./trading-panel/trade-now-panel"
 import { CreateOfferPanel } from "./trading-panel/create-offer-panel"
 import { PositionsSection } from "./trading-panel/positions-section"
 import { ClaimPanel } from "./trading-panel/claim-panel"
+import { AmmPanel } from "./trading-panel/amm/amm-panel"
 
 // ── Resolved market wrapper ───────────────────────────────────────────────────
 
@@ -43,9 +44,10 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
   const { address } = useAccount()
   const catBar = CATEGORY_BAR[market.category]
 
-  const [mode, setMode] = useState<"trade" | "offer">("trade")
+  const [mode, setMode] = useState<"trade" | "offer" | "amm">("trade")
   const [side, setSide] = useState<"buy" | "sell">("buy")
   const isTradeMode = mode === "trade"
+  const isAmmMode = mode === "amm"
   const isBuy = side === "buy"
 
   // ── Shared outcome selection (synced with OrderBook) ──────────────────────────
@@ -139,13 +141,18 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
         className={cn(
           "flex flex-col border border-border border-t-2 bg-card/40",
           "transition-colors duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
-          isBuy ? "border-t-sky-500/60" : "border-t-orange-500/60",
+          isAmmMode
+            ? "border-t-violet-500/60"
+            : isBuy
+              ? "border-t-sky-500/60"
+              : "border-t-orange-500/60",
         )}
       >
         {/* Mode tabs — sliding underline (Sonner-style) instead of color swap */}
         <div className="relative flex border-b border-border">
-          {(["trade", "offer"] as const).map((m) => {
+          {(["trade", "offer", "amm"] as const).map((m) => {
             const active = mode === m
+            const label = m === "trade" ? "Trade now" : m === "offer" ? "Create offer" : "AMM"
             return (
               <button
                 key={m}
@@ -158,7 +165,7 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
                     : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground/80",
                 )}
               >
-                <span className="relative z-10">{m === "trade" ? "Trade now" : "Create offer"}</span>
+                <span className="relative z-10">{label}</span>
                 {active && (
                   <motion.span
                     layoutId="trading-mode-underline"
@@ -180,7 +187,9 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
           })}
         </div>
 
-        {/* Buy / Sell — sliding pill that morphs color on switch */}
+        {/* Buy / Sell — sliding pill that morphs color on switch.
+            Hidden in AMM mode (each AMM card has its own buy/sell card). */}
+        {!isAmmMode && (
         <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 border-b border-border">
           <div
             role="group"
@@ -231,11 +240,17 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
             {isTradeMode ? "Fill order book instantly" : "Post limit order"}
           </span>
         </div>
+        )}
 
-        {/* Outcome selector */}
-        <div className={cn("px-4 pt-4", selected === null ? "pb-4" : "pb-2")}>
-          <OutcomeSelector market={market} catBar={catBar} selected={selected} onSelect={handleSelectOutcome} />
-        </div>
+        {/* Outcome selector — hidden in AMM mode (each AMM card has its own pill row) */}
+        {!isAmmMode && (
+          <div className={cn("px-4 pt-4", selected === null ? "pb-4" : "pb-2")}>
+            <OutcomeSelector market={market} catBar={catBar} selected={selected} onSelect={handleSelectOutcome} />
+          </div>
+        )}
+
+        {/* AMM panel */}
+        {isAmmMode && <AmmPanel market={market} tabBalanceNum={tabBalanceNum} />}
 
         {/* Trade form region — slide-in when an outcome is picked */}
         <AnimatePresence initial={false}>
@@ -257,7 +272,7 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
         </AnimatePresence>
 
         {/* Create offer panel + positions (offer mode only) */}
-        {!isTradeMode && (
+        {mode === "offer" && (
           <>
             <AnimatePresence initial={false}>
               {selected !== null && (
