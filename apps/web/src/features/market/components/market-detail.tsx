@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { ArrowLeft, Calendar, ChevronDown, Copy } from "lucide-react"
 import { motion } from "motion/react"
+import { toast } from "sonner"
 import { cn } from "@workspace/ui/lib/utils"
 import { Badge } from "@workspace/ui/components/badge"
 import { useMarket } from "@/features/market/hooks/use-market"
@@ -12,7 +13,7 @@ import { OrderBook } from "@/features/orders/components/order-book"
 import { TradingPanel } from "@/features/market/components/trading-panel"
 import { ResolutionBar } from "@/features/market/components/resolution-bar"
 import { CommentsSection } from "@/features/market/components/comments-section"
-import { CreateMarketDialog } from "@/features/market/components/create-market-dialog"
+import { MarketsHeaderControls } from "@/features/market/components/markets-header-controls"
 import { MarketImage } from "@/features/market/components/market-image"
 import { MarketPriceChart } from "@/features/market/components/market-price-chart"
 import { SimilarMarkets } from "@/features/market/components/similar-markets"
@@ -31,13 +32,14 @@ const CATEGORY_CONFIG: Record<MarketCategory, { badge: string; border: string }>
 
 // ── Meta row ──────────────────────────────────────────────────────────────────
 
-function MetaRow({ label, value, mono = false, truncate = false }: {
+function MetaRow({ label, value, mono = false, truncate = false, copyable: copyableProp }: {
   label: string
   value: string
   mono?: boolean
   truncate?: boolean
+  copyable?: boolean
 }) {
-  const copyable = mono && value.startsWith("0x")
+  const copyable = copyableProp ?? (mono && value.startsWith("0x"))
 
   return (
     <div className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-0">
@@ -52,7 +54,10 @@ function MetaRow({ label, value, mono = false, truncate = false }: {
         </span>
         {copyable && (
           <button
-            onClick={() => navigator.clipboard.writeText(value)}
+            onClick={() => {
+              navigator.clipboard.writeText(value)
+              toast.success("Copied", { description: value })
+            }}
             className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
             aria-label="Copy"
           >
@@ -61,6 +66,30 @@ function MetaRow({ label, value, mono = false, truncate = false }: {
         )}
       </div>
     </div>
+  )
+}
+
+// ── ENS chip (hero overlay, copyable) ─────────────────────────────────────────
+
+function EnsChip({ label, value }: { label: string; value: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(value)
+        toast.success("Copied", { description: value })
+      }}
+      className={cn(
+        "group flex items-center gap-1.5 px-2 py-0.5 backdrop-blur",
+        "bg-black/40 text-white/90 ring-1 ring-white/15",
+        "transition-colors duration-150 hover:bg-black/55 hover:text-white",
+      )}
+      aria-label={`Copy ${label} ${value}`}
+    >
+      <span className="text-[9px] font-bold uppercase tracking-widest text-white/55">{label}</span>
+      <span className="font-mono text-[11px]">{value}</span>
+      <Copy className="size-3 text-white/55 transition-colors group-hover:text-white/90" aria-hidden />
+    </button>
   )
 }
 
@@ -217,13 +246,7 @@ export function MarketDetail({ id }: { id: string }) {
             Markets
           </motion.span>
         </Link>
-        <motion.div
-          layout
-          layoutId="add-market-button"
-          transition={{ type: "spring", duration: 0.4, bounce: 0 }}
-        >
-          <CreateMarketDialog />
-        </motion.div>
+        <MarketsHeaderControls />
       </div>
 
       {/* Hero — category icon + title overlay */}
@@ -252,6 +275,12 @@ export function MarketDetail({ id }: { id: string }) {
           <h1 className="text-2xl font-semibold leading-snug tracking-tight text-white text-pretty drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:text-3xl">
             {market.title}
           </h1>
+          {(market.ensName || market.ensAnalysisName) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {market.ensName && <EnsChip label="ENS" value={market.ensName} />}
+              {market.ensAnalysisName && <EnsChip label="Analysis" value={market.ensAnalysisName} />}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-4 text-xs text-white/70">
             <span className="flex items-center gap-1.5">
               <Calendar className="size-3.5" aria-hidden />
@@ -310,6 +339,12 @@ export function MarketDetail({ id }: { id: string }) {
               <MetaRow label="Oracle"       value={market.creator}      mono truncate />
               <MetaRow label="Condition ID" value={market.conditionId}  mono truncate />
               <MetaRow label="Tx Hash"      value={market.txHash}       mono truncate />
+              {market.ensName && (
+                <MetaRow label="ENS"          value={market.ensName}          mono truncate copyable />
+              )}
+              {market.ensAnalysisName && (
+                <MetaRow label="ENS Analysis" value={market.ensAnalysisName}  mono truncate copyable />
+              )}
               <MetaRow label="Chain"        value={`${market.chainId}`} />
               <MetaRow label="Created"      value={formatDate(market.createdAt)} />
             </div>

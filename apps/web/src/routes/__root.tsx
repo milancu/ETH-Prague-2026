@@ -17,6 +17,7 @@ import { useMediaQuery } from "@/hooks/use-media-query"
 
 const NAV_LINKS = [
   { to: "/", label: "Markets" },
+  { to: "/dice", label: "Dice" },
   { to: "/orders", label: "Orders" },
   { to: "/positions", label: "Positions" },
   { to: "/chat", label: "Chat" },

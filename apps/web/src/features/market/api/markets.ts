@@ -32,6 +32,8 @@ interface MarketDTO {
   resolution_time: string
   status: MarketStatus
   created_at: string
+  ens_name?: string | null
+  ens_analysis_name?: string | null
 }
 
 interface MarketsPageDTO {
@@ -81,6 +83,8 @@ function dtoToMarket(dto: MarketDTO): Market {
     closingDate: new Date(dto.expires_at),
     status: dto.status,
     createdAt: new Date(dto.created_at),
+    ensName: dto.ens_name ?? null,
+    ensAnalysisName: dto.ens_analysis_name ?? null,
   }
 
   if (dto.outcome_type === "binary") {

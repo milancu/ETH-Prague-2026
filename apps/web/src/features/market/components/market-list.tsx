@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useQueryState, parseAsStringLiteral } from "nuqs"
 import { motion } from "motion/react"
-import { CloudSun, Landmark, Search, Sparkles, TrendingUp, Trophy } from "lucide-react"
+import { CloudSun, Landmark, Sparkles, TrendingUp, Trophy } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { cn } from "@workspace/ui/lib/utils"
 import {
@@ -14,7 +14,7 @@ import {
 import type { MarketCategory } from "@/features/market/types"
 import { useMarkets } from "@/features/market/hooks/use-markets"
 import { MarketCard } from "@/features/market/components/market-card.tsx"
-import { CreateMarketDialog } from "@/features/market/components/create-market-dialog"
+import { MarketsHeaderControls } from "@/features/market/components/markets-header-controls"
 import { TrendingStripe } from "@/features/market/components/trending-stripe"
 import { MarketCommandPalette } from "@/features/market/components/market-command-palette"
 import {
@@ -160,33 +160,7 @@ export function MarketList() {
           {isError && <p className="text-xs text-destructive">Could not load markets</p>}
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Search trigger — full input on sm+, icon-only on mobile */}
-          <button
-            onClick={() => setPaletteOpen(true)}
-            className={cn(
-              "group flex items-center gap-2 border border-border bg-background px-2.5 py-1.5 text-xs",
-              "transition-colors duration-150",
-              "[@media(hover:hover)_and_(pointer:fine)]:hover:border-foreground/40",
-              "active:scale-[0.98]",
-            )}
-            aria-label="Search markets"
-          >
-            <Search aria-hidden className="size-3.5 text-muted-foreground" />
-            <span className="hidden text-muted-foreground sm:inline">Search markets</span>
-            <kbd className="hidden border border-border bg-muted/40 px-1 py-px font-mono text-[9px] text-muted-foreground/70 sm:inline">
-              ⌘K
-            </kbd>
-          </button>
-
-          <motion.div
-            layout
-            layoutId="add-market-button"
-            transition={{ type: "spring", duration: 0.4, bounce: 0 }}
-          >
-            <CreateMarketDialog />
-          </motion.div>
-        </div>
+        <MarketsHeaderControls onSearch={() => setPaletteOpen(true)} />
       </div>
 
       {/* Filter row — sliding pill indicator + sort dropdown */}

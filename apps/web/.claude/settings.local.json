@@ -25,7 +25,10 @@
       "Bash(pnpm lint *)",
       "Read(//c/tmp/x402test/node_modules/@x402/evm/**)",
       "Read(//c/tmp/x402test/**)",
-      "Bash(pnpm view *)"
+      "Bash(pnpm view *)",
+      "PowerShell(pnpm tsc *)",
+      "PowerShell(pnpm exec *)",
+      "Bash(npx tsc *)"
     ]
   },
   "disabledMcpjsonServers": [

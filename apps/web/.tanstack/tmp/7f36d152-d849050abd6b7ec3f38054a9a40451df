@@ -14,7 +14,6 @@ import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as FaucetRouteImport } from './routes/faucet'
 import { Route as ChatRouteImport } from './routes/chat'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as DiceIndexRouteImport } from './routes/dice/index'
 import { Route as MarketsMarketIdRouteImport } from './routes/markets/$marketId'
 import { Route as DiceCommitmentIdRouteImport } from './routes/dice/$commitmentId'
 
@@ -43,11 +42,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DiceIndexRoute = DiceIndexRouteImport.update({
-  id: '/dice/',
-  path: '/dice/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const MarketsMarketIdRoute = MarketsMarketIdRouteImport.update({
   id: '/markets/$marketId',
   path: '/markets/$marketId',
@@ -67,7 +61,6 @@ export interface FileRoutesByFullPath {
   '/positions': typeof PositionsRoute
   '/dice/$commitmentId': typeof DiceCommitmentIdRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
-  '/dice/': typeof DiceIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -77,7 +70,6 @@ export interface FileRoutesByTo {
   '/positions': typeof PositionsRoute
   '/dice/$commitmentId': typeof DiceCommitmentIdRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
-  '/dice': typeof DiceIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -88,7 +80,6 @@ export interface FileRoutesById {
   '/positions': typeof PositionsRoute
   '/dice/$commitmentId': typeof DiceCommitmentIdRoute
   '/markets/$marketId': typeof MarketsMarketIdRoute
-  '/dice/': typeof DiceIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -100,7 +91,6 @@ export interface FileRouteTypes {
     | '/positions'
     | '/dice/$commitmentId'
     | '/markets/$marketId'
-    | '/dice/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -110,7 +100,6 @@ export interface FileRouteTypes {
     | '/positions'
     | '/dice/$commitmentId'
     | '/markets/$marketId'
-    | '/dice'
   id:
     | '__root__'
     | '/'
@@ -120,7 +109,6 @@ export interface FileRouteTypes {
     | '/positions'
     | '/dice/$commitmentId'
     | '/markets/$marketId'
-    | '/dice/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,7 +119,6 @@ export interface RootRouteChildren {
   PositionsRoute: typeof PositionsRoute
   DiceCommitmentIdRoute: typeof DiceCommitmentIdRoute
   MarketsMarketIdRoute: typeof MarketsMarketIdRoute
-  DiceIndexRoute: typeof DiceIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -171,13 +158,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/dice/': {
-      id: '/dice/'
-      path: '/dice'
-      fullPath: '/dice/'
-      preLoaderRoute: typeof DiceIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/markets/$marketId': {
       id: '/markets/$marketId'
       path: '/markets/$marketId'
@@ -203,7 +183,6 @@ const rootRouteChildren: RootRouteChildren = {
   PositionsRoute: PositionsRoute,
   DiceCommitmentIdRoute: DiceCommitmentIdRoute,
   MarketsMarketIdRoute: MarketsMarketIdRoute,
-  DiceIndexRoute: DiceIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

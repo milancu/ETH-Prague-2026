@@ -22,6 +22,8 @@ interface MarketBase {
   closingDate: Date       // maps from BE expires_at
   status: MarketStatus
   createdAt: Date
+  ensName: string | null
+  ensAnalysisName: string | null
 }
 
 export interface BinaryMarket extends MarketBase {
