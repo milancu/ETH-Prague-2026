@@ -21,7 +21,11 @@ from api.llm.tool_registry import ToolContext
 
 _ADDR_RE = re.compile(r"^0x[a-fA-F0-9]{40}$")
 _CONTROL_CHARS = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
-_MAX_MESSAGE_LENGTH = 2000
+# Plain user input is short, but `[tool_result <name>]: <json>` messages
+# carry full Apify payloads (tweets/news/reddit batches) easily reaching
+# tens of KB. Gemini 2.5 Flash has a 1M-token context so 64K per message
+# is comfortable; we still cap to keep abusive payloads bounded.
+_MAX_MESSAGE_LENGTH = 65536
 _DEFAULT_CHAIN_ID = int(os.getenv("CHAIN_ID", "31337"))
 # Chains we have contract bindings + RPC defaults for (web3_client._CHAIN_DEFAULTS).
 _SUPPORTED_CHAINS = frozenset({31337, 84532})
