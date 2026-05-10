@@ -249,7 +249,7 @@ export function MarketDetail({ id }: { id: string }) {
               {status}
             </Badge>
           </div>
-          <h1 className="font-serif text-3xl font-normal leading-[1.05] tracking-[-0.015em] text-white text-pretty drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:text-[2.75rem]">
+          <h1 className="text-2xl font-semibold leading-snug tracking-tight text-white text-pretty drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:text-3xl">
             {market.title}
           </h1>
           <div className="flex flex-wrap items-center gap-4 text-xs text-white/70">

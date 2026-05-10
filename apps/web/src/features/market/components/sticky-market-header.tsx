@@ -100,7 +100,7 @@ export function StickyMarketHeader({ market, visible }: Props) {
         opacity: { duration: 0.18, ease: "easeOut" },
       }}
       className={cn(
-        "sticky top-0 z-40 overflow-hidden border-b border-border/70",
+        "sticky top-0 z-40 -mx-4 overflow-hidden border-b border-border/70",
         "bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80",
       )}
       style={{ pointerEvents: visible ? "auto" : "none" }}
@@ -108,7 +108,7 @@ export function StickyMarketHeader({ market, visible }: Props) {
     >
       <div className="flex h-[52px] items-center gap-3 px-4 sm:gap-4">
         {/* Left: title (truncated) */}
-        <h2 className="min-w-0 flex-1 truncate font-serif text-base leading-none tracking-[-0.01em] text-foreground sm:text-lg">
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold leading-none tracking-tight text-foreground sm:text-base">
           {market.title}
         </h2>
 
