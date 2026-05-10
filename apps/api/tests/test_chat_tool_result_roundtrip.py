@@ -1,4 +1,4 @@
-"""Smoke test: a [tool_result fetch_tweets] message must not trigger another paid request."""
+"""Smoke: [tool_result fetch_tweets] message must not trigger another paid request."""
 
 from __future__ import annotations
 

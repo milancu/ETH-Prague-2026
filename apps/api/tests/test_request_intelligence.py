@@ -1,4 +1,4 @@
-"""Tests for request_intelligence (the free pseudo-tool that emits a payment request)."""
+"""Tests for request_intelligence (free pseudo-tool emitting a payment request)."""
 
 from __future__ import annotations
 

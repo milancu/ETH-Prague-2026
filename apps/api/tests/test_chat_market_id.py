@@ -99,7 +99,8 @@ async def test_chat_without_market_id_has_no_context(client: AsyncClient) -> Non
 
 @pytest.mark.asyncio
 async def test_chat_with_unknown_market_id_returns_404(client: AsyncClient) -> None:
-    with patch("api.routes.chat.run_chat", new=AsyncMock(return_value=ChatResult("x", []))):
+    fake = AsyncMock(return_value=ChatResult("x", []))
+    with patch("api.routes.chat.run_chat", new=fake):
         resp = await client.post(
             "/v1/chat",
             json={
