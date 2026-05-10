@@ -88,6 +88,7 @@ def build_system_prompt(user_address: str | None = None) -> str:
 class ChatResult:
     text: str
     tx_cards: list[dict[str, Any]]
+    intelligence_request: dict[str, Any] | None = None
 
 
 async def run_chat(

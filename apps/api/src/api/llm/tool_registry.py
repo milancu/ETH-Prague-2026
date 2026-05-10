@@ -34,6 +34,8 @@ class ToolContext:
     chain_id: int
     user_address: str | None = None
     tx_cards: list[dict[str, Any]] = field(default_factory=list)
+    market_context: dict[str, Any] | None = None
+    intelligence_request: dict[str, Any] | None = None
 
 
 ToolCallable = Any  # async (args: dict, ctx: ToolContext) -> dict | list | str
