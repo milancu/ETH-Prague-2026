@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Remove-Item \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\\\\src\\\\appkit.d.ts\")",
+      "Bash(pnpm typecheck *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\" -Force)",
+      "Bash(Select-Object Name, PSIsContainer)",
+      "PowerShell(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\" -Recurse -Force | Where-Object { $_.Extension -eq \".py\" } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" | Where-Object { $_.Name -ne \".venv\" } | ForEach-Object { \"$\\($_.Name\\) \\($\\( if \\($_.PSIsContainer\\) { 'dir' } else { 'file' }\\)\\)\" })",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\" -Depth 0 | Where-Object { $_.Name -notmatch \"^\\(\\\\.|node_modules\\)\" } | Select-Object Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\\\\src\\\\api\" -Recurse)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\" -Recurse -Directory)",
+      "Bash(Select-Object -First 20)",
+      "Skill(shadcn)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\web\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object -ExpandProperty Name)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\api\" -Recurse -Directory)",
+      "Bash(Get-ChildItem \"C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\" -Recurse -Name)",
+      "Bash(dir C:\\\\Users\\\\phuon\\\\Projekty\\\\sandbox\\\\eth-2026-monorepo\\\\apps\\\\contracts\\\\packages\\\\hardhat\\\\scripts *)",
+      "Bash(pnpm dev *)",
+      "Bash(curl -sf http://127.0.0.1:8000/v1/health)",
+      "Bash(curl *)",
+      "Bash(pnpm exec *)",
+      "Bash(pnpm lint *)",
+      "Read(//c/tmp/x402test/node_modules/@x402/evm/**)",
+      "Read(//c/tmp/x402test/**)",
+      "Bash(pnpm view *)",
+      "PowerShell(pnpm tsc *)",
+      "PowerShell(pnpm exec *)",
+      "Bash(npx tsc *)",
+      "Bash(xargs basename -a)"
+    ]
+  },
+  "disabledMcpjsonServers": [
+    "shadcn"
+  ]
+}

@@ -1,0 +1,365 @@
+import { useEffect, useMemo, useRef, useState } from "react"
+import { Link } from "@tanstack/react-router"
+import { ArrowLeft, Calendar, ChevronDown, Copy } from "lucide-react"
+import { motion } from "motion/react"
+import { toast } from "sonner"
+import { cn } from "@workspace/ui/lib/utils"
+import { Badge } from "@workspace/ui/components/badge"
+import { useMarket } from "@/features/market/hooks/use-market"
+import { useMarketPrices } from "@/features/market/hooks/use-market-prices"
+import { formatDate, marketStatusLabel } from "@/features/market/lib/utils"
+import type { Market, MarketCategory } from "@/features/market/types"
+import { OrderBook } from "@/features/orders/components/order-book"
+import { TradingPanel } from "@/features/market/components/trading-panel"
+import { ResolutionBar } from "@/features/market/components/resolution-bar"
+import { CommentsSection } from "@/features/market/components/comments-section"
+import { MarketsHeaderControls } from "@/features/market/components/markets-header-controls"
+import { MarketImage } from "@/features/market/components/market-image"
+import { MarketPriceChart } from "@/features/market/components/market-price-chart"
+import { SimilarMarkets } from "@/features/market/components/similar-markets"
+import { LiveTradesTicker } from "@/features/market/components/live-trades-ticker"
+import { StickyMarketHeader } from "@/features/market/components/sticky-market-header"
+
+// ── Static config ─────────────────────────────────────────────────────────────
+
+const CATEGORY_CONFIG: Record<MarketCategory, { badge: string; border: string }> = {
+  Finance:  { badge: "bg-amber-500/10 text-amber-400",    border: "border-amber-500/20"   },
+  Politics: { badge: "bg-blue-500/10 text-blue-400",      border: "border-blue-500/20"    },
+  Sport:    { badge: "bg-emerald-500/10 text-emerald-400", border: "border-emerald-500/20" },
+  Czech:    { badge: "bg-red-500/10 text-red-400",        border: "border-red-500/20"     },
+  Weather:  { badge: "bg-cyan-500/10 text-cyan-400",      border: "border-cyan-500/20"    },
+}
+
+// ── Meta row ──────────────────────────────────────────────────────────────────
+
+function MetaRow({ label, value, mono = false, truncate = false, copyable: copyableProp }: {
+  label: string
+  value: string
+  mono?: boolean
+  truncate?: boolean
+  copyable?: boolean
+}) {
+  const copyable = copyableProp ?? (mono && value.startsWith("0x"))
+
+  return (
+    <div className="flex items-center justify-between gap-4 py-2 border-b border-border last:border-0">
+      <span className="shrink-0 text-[11px] uppercase tracking-widest text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className={cn(
+          "text-xs text-foreground",
+          mono && "font-mono",
+          truncate && "max-w-[180px] truncate",
+        )}>
+          {value}
+        </span>
+        {copyable && (
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(value)
+              toast.success("Copied", { description: value })
+            }}
+            className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Copy"
+          >
+            <Copy className="size-3" />
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── ENS chip (hero overlay, copyable) ─────────────────────────────────────────
+
+function EnsChip({ label, value }: { label: string; value: string }) {
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(value)
+        toast.success("Copied", { description: value })
+      }}
+      className={cn(
+        "group flex items-center gap-1.5 px-2 py-0.5 backdrop-blur",
+        "bg-black/40 text-white/90 ring-1 ring-white/15",
+        "transition-colors duration-150 hover:bg-black/55 hover:text-white",
+      )}
+      aria-label={`Copy ${label} ${value}`}
+    >
+      <span className="text-[9px] font-bold uppercase tracking-widest text-white/55">{label}</span>
+      <span className="font-mono text-[11px]">{value}</span>
+      <Copy className="size-3 text-white/55 transition-colors group-hover:text-white/90" aria-hidden />
+    </button>
+  )
+}
+
+// ── Collapsible section ───────────────────────────────────────────────────────
+// Animates via CSS grid-rows trick (0fr ↔ 1fr) — interruptible, height-aware,
+// no JS measurement needed. ease-out keeps the open feel snappy.
+
+function CollapsibleSection({
+  title,
+  defaultOpen = true,
+  children,
+}: {
+  title: string
+  defaultOpen?: boolean
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className={cn(
+          "flex w-full items-center justify-between gap-2",
+          "text-[11px] font-semibold uppercase tracking-widest text-muted-foreground",
+          "[@media(hover:hover)_and_(pointer:fine)]:hover:text-foreground",
+          "transition-colors duration-150",
+        )}
+      >
+        <span>{title}</span>
+        <ChevronDown
+          aria-hidden
+          className={cn(
+            "size-3.5 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
+            open ? "rotate-0" : "-rotate-90",
+          )}
+        />
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div className="overflow-hidden">{children}</div>
+      </div>
+    </section>
+  )
+}
+
+// ── Skeleton ──────────────────────────────────────────────────────────────────
+
+function DetailSkeleton() {
+  return (
+    <div className="flex flex-col gap-6 animate-pulse">
+      <div className="h-4 w-24 bg-muted" />
+      <div className="h-8 w-3/4 bg-muted" />
+      <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
+        <div className="flex flex-col gap-4">
+          <div className="h-32 bg-muted" />
+          <div className="h-24 bg-muted" />
+        </div>
+        <div className="h-64 bg-muted" />
+      </div>
+    </div>
+  )
+}
+
+// ── Main ──────────────────────────────────────────────────────────────────────
+
+export function MarketDetail({ id }: { id: string }) {
+  const { data: market, isLoading, isError } = useMarket(id)
+  const livePrices = useMarketPrices(market)
+
+  // Sticky compact header — shown once the hero has scrolled out of view.
+  // The actual scroller is Radix ScrollArea's viewport, not window — find it.
+  const heroSentinelRef = useRef<HTMLDivElement>(null)
+  const [stickyVisible, setStickyVisible] = useState(false)
+  useEffect(() => {
+    const el = heroSentinelRef.current
+    if (!el) return
+    const root =
+      (el.closest(
+        "[data-radix-scroll-area-viewport]",
+      ) as HTMLElement | null) ?? null
+    const obs = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!!entry && !entry.isIntersecting),
+      { root, rootMargin: "0px", threshold: 0 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [market?.id])
+
+  const liveMarket = useMemo((): Market | undefined => {
+    if (!market || Object.keys(livePrices).length === 0) return market
+    if (market.outcomeType === "binary") {
+      return {
+        ...market,
+        yesPrice: livePrices["YES"] ?? market.yesPrice,
+        noPrice:  livePrices["NO"]  ?? market.noPrice,
+      }
+    }
+    if (market.outcomeType === "multi") {
+      return {
+        ...market,
+        outcomes: market.outcomes.map(o => ({ ...o, price: livePrices[o.label] ?? o.price })),
+      }
+    }
+    return market
+  }, [market, livePrices])
+
+  if (isLoading) return <DetailSkeleton />
+
+  if (isError || !market) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-24">
+        <p className="text-sm text-muted-foreground">Market not found.</p>
+        <Link to="/" className="text-xs text-muted-foreground underline underline-offset-4 hover:text-foreground">
+          ← Back to markets
+        </Link>
+      </div>
+    )
+  }
+
+  const cat = CATEGORY_CONFIG[market.category]
+  const status = marketStatusLabel(market.status)
+
+  return (
+    <div>
+      {/* Sticky compact header sits outside the gap-4 flex so it costs zero
+          vertical space when collapsed (otherwise the parent's gap shows). */}
+      <StickyMarketHeader market={liveMarket ?? market} visible={stickyVisible} />
+
+      <div className="flex flex-col gap-4">
+      {/* Header — breadcrumb left, Add market right. Both layoutIds match the list page. */}
+      <div className="flex items-center justify-between gap-4">
+        <Link
+          to="/"
+          className="flex w-fit items-center gap-2 text-muted-foreground transition-colors duration-150 hover:text-foreground"
+        >
+          <motion.span
+            initial={{ opacity: 0, x: -6 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+          >
+            <ArrowLeft className="size-5" />
+          </motion.span>
+          <motion.span
+            layoutId="markets-label"
+            className="inline-block text-2xl font-semibold tracking-tight"
+            transition={{ type: "spring", duration: 0.3, bounce: 0 }}
+          >
+            Markets
+          </motion.span>
+        </Link>
+        <MarketsHeaderControls />
+      </div>
+
+      {/* Hero — category icon + title overlay */}
+      <div className="relative isolate overflow-hidden">
+        <MarketImage market={market} size="hero" className="aspect-[16/10] w-full sm:aspect-[12/4]" />
+        <div className="absolute inset-x-0 bottom-0 flex flex-col gap-3 p-4 sm:p-6">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={cn(
+              "px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-widest backdrop-blur",
+              cat.badge,
+            )}>
+              {market.category}
+            </span>
+            <Badge
+              variant="outline"
+              className={cn(
+                "text-[10px] uppercase tracking-widest backdrop-blur",
+                (market.status === "open" || market.status === "pending") && "border-emerald-500/40 text-emerald-300 bg-emerald-500/10",
+                market.status === "resolved"  && "border-white/20 text-white/70 bg-black/30",
+                market.status === "cancelled" && "border-rose-500/40 text-rose-300 bg-rose-500/10",
+              )}
+            >
+              {status}
+            </Badge>
+          </div>
+          <h1 className="text-2xl font-semibold leading-snug tracking-tight text-white text-pretty drop-shadow-[0_2px_8px_rgba(0,0,0,0.6)] sm:text-3xl">
+            {market.title}
+          </h1>
+          {(market.ensName || market.ensAnalysisName) && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              {market.ensName && <EnsChip label="ENS" value={market.ensName} />}
+              {market.ensAnalysisName && <EnsChip label="Analysis" value={market.ensAnalysisName} />}
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-4 text-xs text-white/70">
+            <span className="flex items-center gap-1.5">
+              <Calendar className="size-3.5" aria-hidden />
+              Closes <time dateTime={market.closingDate.toISOString()}>{formatDate(market.closingDate)}</time>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Sentinel — when this scrolls above the ScrollArea top, the sticky
+          compact header at the top of the page slides in. */}
+      <div ref={heroSentinelRef} aria-hidden className="h-px w-full -mt-px" />
+
+      {/* Main grid */}
+      <div className="grid gap-8 lg:grid-cols-[1fr_440px]">
+
+        {/* Left — description, rules, metadata */}
+        <div className="flex flex-col gap-6">
+          {/* Price chart */}
+          <section>
+            <MarketPriceChart market={liveMarket ?? market} />
+          </section>
+
+          {/* Live trade ticker */}
+          <LiveTradesTicker market={liveMarket ?? market} />
+
+          {market.description && (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Description</h2>
+              <p className="text-sm leading-relaxed text-foreground/80">{market.description}</p>
+            </section>
+          )}
+
+          {market.rules && (
+            <section className="flex flex-col gap-2">
+              <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Resolution rules</h2>
+              <p className="text-sm leading-relaxed text-foreground/80">{market.rules}</p>
+            </section>
+          )}
+
+
+
+          {/* Order book */}
+          <CollapsibleSection title="Order Book">
+            <OrderBook market={liveMarket ?? market} />
+          </CollapsibleSection>
+
+          {/* Comments */}
+          <CommentsSection marketId={market.id} />
+
+          {/* Technical details */}
+          <section className="flex flex-col gap-1">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Details</h2>
+            <div className={cn("border border-border px-4", cat.border, "border-l-2")}>
+              <MetaRow label="Creator"      value={market.creator}      mono truncate />
+              <MetaRow label="Oracle"       value={market.creator}      mono truncate />
+              <MetaRow label="Condition ID" value={market.conditionId}  mono truncate />
+              <MetaRow label="Tx Hash"      value={market.txHash}       mono truncate />
+              {market.ensName && (
+                <MetaRow label="ENS"          value={market.ensName}          mono truncate copyable />
+              )}
+              {market.ensAnalysisName && (
+                <MetaRow label="ENS Analysis" value={market.ensAnalysisName}  mono truncate copyable />
+              )}
+              <MetaRow label="Chain"        value={`${market.chainId}`} />
+              <MetaRow label="Created"      value={formatDate(market.createdAt)} />
+            </div>
+          </section>
+        </div>
+
+        {/* Right — trading panel + suggestions. top-[64px] keeps it clear of the
+            sticky compact header (52px) when both are pinned. */}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-[64px] lg:self-start">
+          <TradingPanel market={liveMarket ?? market} />
+          <ResolutionBar market={liveMarket ?? market} />
+          <SimilarMarkets market={market} />
+        </div>
+      </div>
+      </div>
+    </div>
+  )
+}

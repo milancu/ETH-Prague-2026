@@ -1,0 +1,51 @@
+{
+  "name": "contracts",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "wait-on tcp:8545 && pnpm run start",
+    "dev:app": "wait-on tcp:8545 && pnpm run hardhat:deploy && pnpm run start",
+    "account": "pnpm run hardhat:account",
+    "account:generate": "pnpm --filter @eth/hardhat run account:generate",
+    "account:import": "pnpm --filter @eth/hardhat run account:import",
+    "account:reveal-pk": "pnpm --filter @eth/hardhat run account:reveal-pk",
+    "chain": "pnpm run hardhat:chain",
+    "compile": "pnpm run hardhat:compile",
+    "deploy": "pnpm run hardhat:deploy",
+    "fork": "pnpm run hardhat:fork",
+    "format": "pnpm run next:format && pnpm run hardhat:format",
+    "generate": "pnpm run account:generate",
+    "hardhat:account": "pnpm --filter @eth/hardhat run account",
+    "hardhat:chain": "pnpm --filter @eth/hardhat run chain",
+    "hardhat:check-types": "pnpm --filter @eth/hardhat run check-types",
+    "hardhat:clean": "pnpm --filter @eth/hardhat run clean",
+    "hardhat:compile": "pnpm --filter @eth/hardhat run compile",
+    "hardhat:deploy": "pnpm --filter @eth/hardhat run deploy",
+    "hardhat:flatten": "pnpm --filter @eth/hardhat run flatten",
+    "hardhat:fork": "pnpm --filter @eth/hardhat run fork",
+    "hardhat:format": "pnpm --filter @eth/hardhat run format",
+    "hardhat:generate": "pnpm --filter @eth/hardhat run generate",
+    "hardhat:hardhat-verify": "pnpm --filter @eth/hardhat run hardhat-verify",
+    "hardhat:lint": "pnpm --filter @eth/hardhat run lint",
+    "hardhat:lint-staged": "pnpm --filter @eth/hardhat run lint-staged",
+    "hardhat:test": "pnpm --filter @eth/hardhat run test",
+    "hardhat:verify": "pnpm --filter @eth/hardhat run verify",
+    "lint": "pnpm run next:lint && pnpm run hardhat:lint",
+    "next:build": "pnpm --filter @eth/nextjs run build",
+    "next:check-types": "pnpm --filter @eth/nextjs run check-types",
+    "next:format": "pnpm --filter @eth/nextjs run format",
+    "next:lint": "pnpm --filter @eth/nextjs run lint",
+    "next:serve": "pnpm --filter @eth/nextjs run serve",
+    "start": "pnpm --filter @eth/nextjs run start",
+    "test": "pnpm run hardhat:test",
+    "verify": "pnpm run hardhat:verify"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "lint-staged": "~13.2.2",
+    "wait-on": "^8.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

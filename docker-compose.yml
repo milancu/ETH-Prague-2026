@@ -1,0 +1,98 @@
+services:
+  api:
+    build:
+      context: apps/api
+      dockerfile: Dockerfile
+    environment:
+      CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
+      # SQLite stored on a named volume so it survives container restarts.
+      DATABASE_URL: sqlite+aiosqlite:////app/data/api.db
+      # Default chain for prepare/* and balance reads when chain_id is omitted.
+      CHAIN_ID: ${CHAIN_ID:-84532}
+      # RPC URLs for tx_hash verification — falls back to public endpoints if unset.
+      RPC_URL_84532: ${RPC_URL_84532:-https://sepolia.base.org}
+      RPC_URL_31337: ${RPC_URL_31337:-http://127.0.0.1:8545}
+      # Eth Sepolia — the ENS resolver lives on L1, not Base.
+      RPC_URL_11155111: ${RPC_URL_11155111:-https://ethereum-sepolia-rpc.publicnode.com}
+      # Hosts allowed to connect to the MCP transport (comma-separated).
+      MCP_ALLOWED_HOSTS: ${MCP_ALLOWED_HOSTS:-api.kowalski-market.com,localhost,127.0.0.1}
+      # Google Gemini API key — required by Kowalsky chat (llm/provider.py).
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?GEMINI_API_KEY is required}
+      # ── ElevenLabs voice (STT + TTS) ──────────────────────────────────────
+      # Required by /v1/voice/stt and /v1/voice/tts.
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY:?ELEVENLABS_API_KEY is required}
+      ELEVENLABS_VOICE_ID: ${ELEVENLABS_VOICE_ID:-JBFqnCBsd6RMkjVDRZzb}
+      ELEVENLABS_TTS_MODEL: ${ELEVENLABS_TTS_MODEL:-eleven_flash_v2_5}
+      # ── ENS integration ───────────────────────────────────────────────────
+      ENS_RESOLVER_ADDRESS: ${ENS_RESOLVER_ADDRESS:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+      ENS_REGISTRAR_ADDRESS: ${ENS_REGISTRAR_ADDRESS:-0xC1FF759da5f4f33a63007b668c60074a2a71D56B}
+      ENS_REGISTRAR_DEPLOY_BLOCK: ${ENS_REGISTRAR_DEPLOY_BLOCK:-10822559}
+      ENS_BRIDGE_ENABLED: ${ENS_BRIDGE_ENABLED:-0}
+      ENS_BRIDGE_SIGNER_PK: ${ENS_BRIDGE_SIGNER_PK:-}
+      ENS_GATEWAY_SIGNER_PK: ${ENS_GATEWAY_SIGNER_PK:-}
+      ENS_GATEWAY_URL: ${ENS_GATEWAY_URL:-https://api.kowalski-market.com/v1/ens-gateway/{sender}/{data}.json}
+      # ── x402 ──────────────────────────────────────────────────────────────
+      # Outbound — also imported into mcpc on container start (see Dockerfile entrypoint).
+      X402_OUT_WALLET_PK: ${X402_OUT_WALLET_PK:?X402_OUT_WALLET_PK is required}
+      # Inbound — address agents pay for premium MCP tools.
+      X402_IN_WALLET_ADDRESS: ${X402_IN_WALLET_ADDRESS:?X402_IN_WALLET_ADDRESS is required}
+      # ── Contract addresses (Base Sepolia) ─────────────────────────────────
+      # Required by the ENS bridge and prepare/* endpoints.  Override only if
+      # contracts are redeployed.
+      TAB_ADDRESS_84532: ${TAB_ADDRESS_84532:-0xe987bdb99fE70af574D4d9eeA5A7700fe29feB16}
+      CT_ADDRESS_84532: ${CT_ADDRESS_84532:-0x912c5a72B5a024Ff88987B19632D670185c5A65e}
+      PMV2_ADDRESS_84532: ${PMV2_ADDRESS_84532:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+      WRAPPER_FACTORY_ADDRESS_84532: ${WRAPPER_FACTORY_ADDRESS_84532:-0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81}
+      TAB_CLOB_ADDRESS_84532: ${TAB_CLOB_ADDRESS_84532:-0xC34715695188b3cE1319C9BF7423713fB3C2A470}
+      # ── CLOB matching tiebreaker ─────────────────────────────────────────
+      # "fifo" or "random" (SpaceComputer cTRNG via public IPNS beacon).
+      CLOB_MATCH_TIEBREAKER: ${CLOB_MATCH_TIEBREAKER:-random}
+      SPACECOMPUTER_API_URL: ${SPACECOMPUTER_API_URL:-https://ipfs.io/ipns/k2k4r8lvomw737sajfnpav0dpeernugnryng50uheyk1k39lursmn09f}
+      SPACECOMPUTER_API_KEY: ${SPACECOMPUTER_API_KEY:-}
+      SPACECOMPUTER_SEED_TTL_S: ${SPACECOMPUTER_SEED_TTL_S:-30}
+    volumes:
+      - api_data:/app/data
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Required
+        VITE_WALLETCONNECT_PROJECT_ID: ${VITE_WALLETCONNECT_PROJECT_ID:?VITE_WALLETCONNECT_PROJECT_ID is required}
+        VITE_API_URL: ${VITE_API_URL:?VITE_API_URL is required}
+        # Optional — defaults to Base Sepolia
+        VITE_APP_URL: ${VITE_APP_URL:-}
+        VITE_CHAIN_ID: ${VITE_CHAIN_ID:-84532}
+        # Contract addresses — default to deployed Base Sepolia addresses
+        VITE_TABCOIN_ADDRESS: ${VITE_TABCOIN_ADDRESS:-0xe987bdb99fE70af574D4d9eeA5A7700fe29feB16}
+        VITE_PREDICTION_MARKET_ADDRESS: ${VITE_PREDICTION_MARKET_ADDRESS:-0xE5ddc8f9Ed573CfA1c23aaF97D6193FD2510EF93}
+        VITE_CONDITIONAL_TOKENS_ADDRESS: ${VITE_CONDITIONAL_TOKENS_ADDRESS:-0x912c5a72B5a024Ff88987B19632D670185c5A65e}
+        VITE_TABCLOB_ADDRESS: ${VITE_TABCLOB_ADDRESS:-0xC34715695188b3cE1319C9BF7423713fB3C2A470}
+        VITE_POSITION_WRAPPER_FACTORY_ADDRESS: ${VITE_POSITION_WRAPPER_FACTORY_ADDRESS:-0x5F57977678EE0B53Ca91adeF98D9C6D315C5ab81}
+        VITE_DEFAULT_ORACLE: ${VITE_DEFAULT_ORACLE:-0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266}
+    ports:
+      - "3001:80"
+    restart: unless-stopped
+
+  landing:
+    build:
+      context: .
+      dockerfile: apps/landing/Dockerfile
+    ports:
+      - "3002:80"
+    restart: unless-stopped
+
+  cosmic-dice:
+    build:
+      context: apps/space-computer-random-dice-main
+      dockerfile: Dockerfile
+    ports:
+      - "3003:80"
+    restart: unless-stopped
+
+volumes:
+  api_data:

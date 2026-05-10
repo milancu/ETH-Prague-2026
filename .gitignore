@@ -1,0 +1,48 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Local env files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Testing
+coverage
+
+# Turbo
+.turbo
+
+# Vercel
+.vercel
+
+# Build Outputs
+dist
+
+# Debug
+npm-debug.log*
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# Local SQLite databases (per-dev state)
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Misc
+.DS_Store
+*.pem
+
+# Claude Code: per-user file
+.claude/settings.local.json
+# Third-party skill from skills-lock.json (each dev re-installs locally; project-specific skills stay tracked)
+.claude/skills/monorepo-management/
+_reference/

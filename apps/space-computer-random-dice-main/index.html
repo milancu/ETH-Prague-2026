@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cosmic Dice — SpaceComputer cTRNG</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #000000;
+    --muted: #666;
+    --line: #000;
+    --soft: #f2f2f2;
+    --soft-2: #e8e8e8;
+    --accent: #000;
+    --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+    --sans: 'Space Grotesk', -apple-system, system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+  }
+
+  body {
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    background-image:
+      radial-gradient(circle at 1px 1px, #000 1px, transparent 0);
+    background-size: 32px 32px;
+    background-position: 0 0;
+    background-attachment: fixed;
+    background-color: #fff;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.97) 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 880px;
+    margin: 0 auto;
+    padding: 48px 28px 96px;
+  }
+
+  /* ---------- Header / hero ---------- */
+  .hero {
+    border: 2px solid var(--fg);
+    padding: 28px 32px;
+    margin-bottom: 36px;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      repeating-linear-gradient(45deg, transparent 0 18px, rgba(0,0,0,0.04) 18px 19px);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .hero-tag .pulse {
+    width: 8px;
+    height: 8px;
+    background: #000;
+    border-radius: 50%;
+    animation: pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.3; transform: scale(0.7); }
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-weight: 700;
+    font-size: 44px;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin: 0 0 14px;
+  }
+  h1 .accent {
+    display: inline-block;
+    background: #000;
+    color: #fff;
+    padding: 0 10px;
+    transform: skew(-6deg);
+  }
+  .hero-sub {
+    font-size: 14px;
+    color: var(--muted);
+    margin: 0;
+    font-family: var(--mono);
+  }
+  .hero-sub a { color: #000; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* dice illustration */
+  .dice-strip {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .dice-strip .die {
+    width: 36px; height: 36px;
+    border: 1.5px solid #000;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+    font-size: 18px;
+    background: #fff;
+    transition: transform .2s ease, background .2s ease, color .2s ease;
+  }
+  .dice-strip .die:hover { background: #000; color: #fff; transform: translateY(-2px); }
+
+  /* ---------- Section headers ---------- */
+  h2 {
+    font-family: var(--sans);
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin: 48px 0 18px;
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    border-bottom: 2px solid #000;
+    padding-bottom: 10px;
+  }
+  h2 .num {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    background: #000;
+    color: #fff;
+    padding: 3px 8px;
+    letter-spacing: 0.15em;
+  }
+  h3 { font-size: 15px; font-weight: 600; margin: 18px 0 8px; }
+
+  p { margin: 0 0 12px; }
+  p, li { font-size: 14.5px; }
+
+  /* ---------- Code / mono ---------- */
+  code, pre, textarea, .mono { font-family: var(--mono); font-size: 12.5px; }
+
+  pre {
+    background: #fafafa;
+    border: 1px solid #000;
+    border-left: 4px solid #000;
+    padding: 14px 16px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-size: 12px;
+    line-height: 1.55;
+    margin: 12px 0;
+  }
+
+  hr { border: 0; border-top: 1px dashed #000; margin: 36px 0; }
+
+  /* ---------- Form ---------- */
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+
+  input, select, textarea, button {
+    font-family: var(--sans);
+    font-size: 14px;
+    border: 1.5px solid #000;
+    background: #fff;
+    color: #000;
+    padding: 9px 12px;
+    transition: all .15s ease;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 4px 4px 0 0 #000;
+    transform: translate(-2px, -2px);
+  }
+  input[type="number"] { width: 140px; font-family: var(--mono); font-weight: 500; }
+  input[type="text"] { font-family: var(--mono); }
+  textarea {
+    width: 100%;
+    min-height: 200px;
+    box-sizing: border-box;
+    font-family: var(--mono);
+    line-height: 1.5;
+  }
+  textarea[readonly] { background: #fafafa; }
+
+  button {
+    cursor: pointer;
+    padding: 10px 20px;
+    font-weight: 600;
+    background: #000;
+    color: #fff;
+    letter-spacing: 0.04em;
+    position: relative;
+  }
+  button:hover:not(:disabled) {
+    background: #fff;
+    color: #000;
+    box-shadow: 4px 4px 0 0 #000;
+    transform: translate(-2px, -2px);
+  }
+  button:active:not(:disabled) {
+    box-shadow: 2px 2px 0 0 #000;
+    transform: translate(-1px, -1px);
+  }
+  button:disabled { background: #ccc; color: #666; cursor: not-allowed; border-color: #999; }
+
+  button.ghost { background: #fff; color: #000; }
+  button.ghost:hover:not(:disabled) { background: #000; color: #fff; }
+
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .row > div { display: flex; flex-direction: column; }
+
+  details {
+    margin: 14px 0;
+    border: 1px solid #000;
+    background: #fff;
+  }
+  details summary {
+    padding: 10px 14px;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    user-select: none;
+    background: #fff;
+    transition: background .15s ease;
+  }
+  details summary:hover { background: #000; color: #fff; }
+  details[open] summary { background: #000; color: #fff; border-bottom: 1px solid #000; }
+  details pre { margin: 0; border: 0; border-left: 0; }
+
+  .hint { font-size: 12.5px; color: var(--muted); margin: 6px 0 0; font-family: var(--mono); }
+  .err { color: #000; font-weight: 700; background: #fff; border: 2px solid #000; padding: 10px 14px; display: inline-block; }
+
+  /* ---------- Tables ---------- */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 13.5px;
+    margin: 10px 0;
+    background: #fff;
+  }
+  th, td {
+    border: 1px solid #000;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: top;
+  }
+  th {
+    background: #000;
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+  }
+  table.kv th { width: 38%; background: #f2f2f2; color: #000; text-transform: none; letter-spacing: 0; font-family: var(--sans); font-weight: 600; font-size: 13px; }
+
+  /* ---------- Cards (commits) ---------- */
+  ul.commits { list-style: none; padding: 0; margin: 12px 0 0; display: grid; gap: 10px; }
+  ul.commits li {
+    border: 1.5px solid #000;
+    padding: 14px 16px;
+    background: #fff;
+    transition: all .15s ease;
+    position: relative;
+  }
+  ul.commits li:hover {
+    box-shadow: 6px 6px 0 0 #000;
+    transform: translate(-3px, -3px);
+  }
+  ul.commits li .hash {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+  }
+  ul.commits li .meta { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 4px; }
+  .badge {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border: 1px solid #000;
+    background: #fff;
+    margin-left: 6px;
+  }
+  .badge.done { background: #000; color: #fff; }
+
+  /* ---------- Result hero ---------- */
+  .result-hero {
+    border: 3px solid #000;
+    padding: 24px 28px;
+    margin: 14px 0 18px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    box-shadow: 8px 8px 0 0 #000;
+  }
+  .result-hero .die-big {
+    width: 100px;
+    height: 100px;
+    border: 3px solid #000;
+    display: grid;
+    place-items: center;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 64px;
+    background: #000;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .result-hero .meta { flex: 1; min-width: 0; }
+  .result-hero .meta-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0 0 6px;
+  }
+  .result-hero .meta-title { font-size: 20px; font-weight: 700; margin: 0 0 4px; }
+  .result-hero .meta-line { font-family: var(--mono); font-size: 12px; color: var(--muted); word-break: break-all; }
+
+  /* ---------- Commit success card ---------- */
+  .commit-card {
+    border: 2px solid #000;
+    padding: 18px 22px;
+    background: #fff;
+    margin: 14px 0;
+    box-shadow: 6px 6px 0 0 #000;
+  }
+  .commit-card .hdr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .commit-card .check {
+    width: 22px; height: 22px;
+    background: #000; color: #fff;
+    display: grid; place-items: center;
+    font-weight: 700;
+  }
+
+  .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  textarea#oracle-text { min-height: 480px; font-size: 11.5px; line-height: 1.55; }
+
+  .small { font-size: 12.5px; color: var(--muted); }
+
+  footer {
+    margin-top: 56px;
+    padding-top: 18px;
+    border-top: 1px dashed #000;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  footer a { color: #000; text-decoration: underline; text-underline-offset: 3px; }
+
+  /* ---------- Loading state ---------- */
+  .loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .loading::before {
+    content: "";
+    width: 12px; height: 12px;
+    border: 2px solid #000;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 600px) {
+    h1 { font-size: 32px; }
+    .hero { padding: 22px 20px; }
+    .wrap { padding: 28px 18px 80px; }
+    .result-hero { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .result-hero .die-big { width: 80px; height: 80px; font-size: 50px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <p class="hero-tag"><span class="pulse"></span>Live · cTRNG · Cosmic radiation</p>
+  <h1>Cosmic Dice <span class="accent">1—6</span></h1>
+  <p class="hero-sub">Provably-fair dice roll powered by SpaceComputer beacon.
+    <a href="https://docs.spacecomputer.io/docs/concepts/cosmic-randomness" target="_blank" rel="noopener">→ docs</a>
+  </p>
+  <div class="dice-strip" aria-hidden="true">
+    <div class="die">⚀</div>
+    <div class="die">⚁</div>
+    <div class="die">⚂</div>
+    <div class="die">⚃</div>
+    <div class="die">⚄</div>
+    <div class="die">⚅</div>
+  </div>
+</header>
+
+<h2><span class="num">00</span>Co to je &amp; jak to funguje</h2>
+<p><strong>Hra.</strong> Teď se zavážeš (<em>commit</em>) k losování v budoucím čase. Výsledek je plně určen blokem SpaceComputer beacon (cosmic radiation), který v ten okamžik vznikne — nikdo ho nemůže předem znát ani vybrat.</p>
+<p><strong>Výstup:</strong> jedna kostka <strong>1–6</strong>, rovnoměrně, P(každé) = 1/6.</p>
+<p><strong>Postup:</strong> (1) Commit teď → vygeneruje SHA-256 hash, který <em>publikuj veřejně</em>. (2) Počkej, až vznikne cílový beacon blok (1 blok / minutu). (3) Reveal: kdokoliv stáhne ten blok a deterministicky dopočítá výsledek.</p>
+<details>
+  <summary>Přesný algoritmus odvození</summary>
+  <pre>raw    = bytes(ctrng[0]) || bytes(ctrng[1]) || bytes(ctrng[2])
+seed   = SHA256(raw)                                       // 32 bytes
+stream = SHA256(seed || u32be(0)) || SHA256(seed || u32be(1)) || ...
+draw bytes from stream; accept b iff b &lt; 252               // rejection sampling
+roll   = (b % 6) + 1
+die    = first accepted byte
+Result (1..6) = die</pre>
+</details>
+
+<h2><span class="num">01</span>Commit</h2>
+<div class="row">
+  <div>
+    <label for="delay">Reveal in (minutes)</label>
+    <input type="number" id="delay" value="5" step="1" min="1">
+  </div>
+  <div>
+    <button id="commit-btn">Create commitment →</button>
+  </div>
+</div>
+<p class="hint">Beacon vydává 1 blok / minutu, takže minimum je 1.</p>
+<div id="commit-output"></div>
+
+<h2><span class="num">◌◌</span>Formát výstupu (preview)</h2>
+<p class="small">Po Reveal uvidíš přesně tato pole:</p>
+<table class="kv">
+  <tr><th>Pole</th><th style="background:#000;color:#fff;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:500;">Hodnota (placeholder)</th></tr>
+  <tr><td>Result (1–6)</td><td><code>?</code> — uniform, P=1/6</td></tr>
+  <tr><td>Commitment hash</td><td><code>sha256(commitment-json)</code> — 64 hex znaků</td></tr>
+  <tr><td>Beacon sequence</td><td>integer block number</td></tr>
+  <tr><td>Beacon time</td><td>UTC timestamp daného bloku</td></tr>
+  <tr><td>cTRNG values</td><td>3 hex stringy z kosmického záření</td></tr>
+  <tr><td>Derived seed</td><td><code>sha256(ctrng[0..2])</code> — 64 hex znaků</td></tr>
+</table>
+
+<h2><span class="num">02</span>Reveal</h2>
+<p class="small">Po cílovém čase: stáhne beacon blok z IPFS a deterministicky dopočítá výsledek.</p>
+<button id="reveal-btn">Reveal latest commitment →</button>
+<div id="reveal-output"></div>
+
+<div id="active-card" style="display:none;">
+  <h2><span class="num">03</span>Uložené commitmenty</h2>
+  <p class="small">Uloženo v <code>localStorage</code> tohoto prohlížeče.</p>
+  <ul class="commits" id="commitment-list"></ul>
+  <div class="actions"><button class="ghost" id="clear-btn">Clear all</button></div>
+</div>
+
+<footer>
+  <span>Beacon: <code>k2k4r8…09f</code> · 1 block / 60 s</span>
+  <a href="https://docs.spacecomputer.io/docs/how-to/ctrng" target="_blank" rel="noopener">spec ↗</a>
+</footer>
+
+</div>
+
+<script>
+const BEACON_IPNS = "k2k4r8lvomw737sajfnpav0dpeernugnryng50uheyk1k39lursmn09f";
+const BEACON_URL = `https://ipfs.io/ipns/${BEACON_IPNS}`;
+const IPFS_GATEWAY = "https://ipfs.io";
+const BEACON_INTERVAL_SEC = 60;
+const STORE_KEY = "cosmic_dice_commitments_v1";
+
+// ---------- crypto + bytes helpers ----------
+async function sha256(bytes) {
+  const buf = await crypto.subtle.digest("SHA-256", bytes);
+  return new Uint8Array(buf);
+}
+function hexToBytes(hex) {
+  const out = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < out.length; i++) out[i] = parseInt(hex.substr(i*2, 2), 16);
+  return out;
+}
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+function concatBytes(...arrays) {
+  const total = arrays.reduce((s, a) => s + a.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrays) { out.set(a, off); off += a.length; }
+  return out;
+}
+function u32be(n) {
+  const b = new Uint8Array(4);
+  b[0] = (n >>> 24) & 0xff;
+  b[1] = (n >>> 16) & 0xff;
+  b[2] = (n >>> 8) & 0xff;
+  b[3] = n & 0xff;
+  return b;
+}
+
+// ---------- core derivation ----------
+async function deriveDieRoll(ctrngValues) {
+  const raw = concatBytes(...ctrngValues.map(hexToBytes));
+  const seed = await sha256(raw);
+  let ctr = 0;
+  while (true) {
+    const block = await sha256(concatBytes(seed, u32be(ctr)));
+    for (const b of block) {
+      if (b < 252) {
+        return { seed_hex: bytesToHex(seed), die: (b % 6) + 1 };
+      }
+    }
+    ctr++;
+  }
+}
+
+// ---------- canonical JSON + commitment hash ----------
+function sortKeysDeep(o) {
+  if (Array.isArray(o)) return o.map(sortKeysDeep);
+  if (o && typeof o === "object") {
+    const sorted = {};
+    for (const k of Object.keys(o).sort()) sorted[k] = sortKeysDeep(o[k]);
+    return sorted;
+  }
+  return o;
+}
+function canonicalJson(obj) { return JSON.stringify(sortKeysDeep(obj), null, 2); }
+async function commitmentHash(c) {
+  const enc = new TextEncoder().encode(canonicalJson(c));
+  return bytesToHex(await sha256(enc));
+}
+
+// ---------- beacon I/O ----------
+async function fetchJson(url) {
+  const r = await fetch(url, { cache: "no-store" });
+  if (!r.ok) throw new Error(`HTTP ${r.status} fetching ${url}`);
+  return r.json();
+}
+async function fetchLatestBlock() { return fetchJson(BEACON_URL); }
+async function fetchBlockByCid(cidPath) {
+  const cid = cidPath.startsWith("/ipfs/") ? cidPath.slice(6) : cidPath;
+  return fetchJson(`${IPFS_GATEWAY}/ipfs/${cid}`);
+}
+async function fetchBlockBySequence(targetSeq, onProgress) {
+  let block = await fetchLatestBlock();
+  const currentSeq = block.data.sequence;
+  if (targetSeq > currentSeq) {
+    const eta = (targetSeq - currentSeq) * BEACON_INTERVAL_SEC;
+    const min = Math.ceil(eta / 60);
+    throw new Error(`Target block ${targetSeq} not yet published (latest is ${currentSeq}). Wait ~${min} more minute${min===1?"":"s"}.`);
+  }
+  const distance = currentSeq - targetSeq;
+  let walked = 0;
+  while (block.data.sequence > targetSeq) {
+    if (!block.previous) throw new Error("Reached beacon genesis without finding target.");
+    block = await fetchBlockByCid(block.previous);
+    walked++;
+    onProgress?.(walked, distance);
+  }
+  if (block.data.sequence !== targetSeq) {
+    throw new Error(`Chain skipped target — landed on ${block.data.sequence}.`);
+  }
+  return block;
+}
+
+// ---------- localStorage ----------
+function loadStore() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY) || "[]"); }
+  catch { return []; }
+}
+function saveStore(arr) { localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }
+
+// ---------- UI helpers ----------
+const $ = id => document.getElementById(id);
+const escapeHtml = s => String(s).replace(/[<>&'"]/g, c => ({"<":"&lt;",">":"&gt;","&":"&amp;","'":"&#39;",'"':"&quot;"}[c]));
+function fmtTime(unix) { return new Date(unix * 1000).toLocaleString(); }
+const DIE_GLYPH = ["", "⚀", "⚁", "⚂", "⚃", "⚄", "⚅"];
+
+// ---------- handlers ----------
+$("commit-btn").onclick = async () => {
+  const out = $("commit-output");
+  const btn = $("commit-btn");
+  btn.disabled = true;
+  out.innerHTML = '<p class="loading">Fetching current beacon state…</p>';
+  try {
+    const minutes = parseFloat($("delay").value);
+    if (!(minutes > 0)) throw new Error("Minutes must be positive.");
+    const delaySec = Math.floor(minutes * 60);
+    const blocksToWait = Math.max(1, Math.floor(delaySec / BEACON_INTERVAL_SEC));
+
+    const latest = await fetchLatestBlock();
+    const currentSeq = latest.data.sequence;
+    const currentTs = latest.data.timestamp;
+    const targetSeq = currentSeq + blocksToWait;
+    const targetEta = currentTs + blocksToWait * BEACON_INTERVAL_SEC;
+
+    const commitment = {
+      scheme_version: "1.0",
+      beacon: { name: "SpaceComputer cTRNG", url: BEACON_URL, ipns: BEACON_IPNS, block_interval_sec: BEACON_INTERVAL_SEC },
+      committed_at: {
+        current_sequence: currentSeq,
+        current_timestamp_unix: currentTs,
+        current_timestamp_iso: new Date(currentTs * 1000).toISOString(),
+        wall_clock_unix: Math.floor(Date.now() / 1000),
+      },
+      target: {
+        sequence: targetSeq,
+        estimated_timestamp_unix: targetEta,
+        estimated_timestamp_iso: new Date(targetEta * 1000).toISOString(),
+        delay_minutes: minutes,
+      },
+      algorithm: {
+        step_1: "raw = bytes(ctrng[0]) || bytes(ctrng[1]) || bytes(ctrng[2])",
+        step_2: "seed = SHA256(raw)",
+        step_3: "stream = SHA256(seed||u32be(0)) || SHA256(seed||u32be(1)) || ...",
+        step_4: "draw bytes from stream; accept b iff b < 252; roll = (b%6)+1",
+        step_5: "first accepted byte -> die ; result (1..6) = die",
+      },
+    };
+    const hash = await commitmentHash(commitment);
+    commitment.commitment_sha256 = hash;
+
+    const store = loadStore();
+    store.push(commitment);
+    saveStore(store);
+
+    out.innerHTML = `
+      <div class="commit-card">
+        <div class="hdr"><span class="check">✓</span> Commitment created</div>
+        <table class="kv">
+          <tr><th>Current sequence</th><td><code>${currentSeq}</code></td></tr>
+          <tr><th>Target sequence</th><td><code>${targetSeq}</code></td></tr>
+          <tr><th>Estimated reveal</th><td>${fmtTime(targetEta)}</td></tr>
+          <tr><th>Commitment SHA-256</th><td class="mono" style="word-break:break-all;">${hash}</td></tr>
+        </table>
+        <p class="hint">Tento hash <strong>publikuj teď</strong> (tweet, on-chain tx, OpenTimestamps, signed git commit). Bez toho commitment není závazný.</p>
+        <div class="actions">
+          <button id="copy-hash">Copy hash</button>
+          <button class="ghost" id="download-json">Download commitment JSON</button>
+        </div>
+      </div>
+
+      <h3>Popis pro oracle / market description</h3>
+      <p class="small">Text níže obsahuje commitment hash, referenci na cílový beacon blok a přesný algoritmus — oracle ho použije k jednoznačnému, ověřitelnému resolvnutí. Vyber, na která čísla se sází:</p>
+      <div class="row">
+        <div>
+          <label for="oracle-numbers">Vyhrávající číslo/čísla z 1–6 (čárkou)</label>
+          <input type="text" id="oracle-numbers" value="6" style="width:200px;">
+        </div>
+      </div>
+      <p id="oracle-error"></p>
+      <textarea id="oracle-text" readonly></textarea>
+      <div class="actions">
+        <button id="copy-oracle">Copy oracle text</button>
+        <button class="ghost" id="download-oracle">Download .txt</button>
+      </div>
+
+      <details>
+        <summary>Full commitment JSON</summary>
+        <pre>${escapeHtml(canonicalJson(commitment))}</pre>
+      </details>`;
+
+    $("copy-hash").onclick = () => navigator.clipboard.writeText(hash).then(() => $("copy-hash").textContent = "Copied ✓");
+    $("download-json").onclick = () => {
+      const blob = new Blob([canonicalJson(commitment)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `commitment-${hash.slice(0,8)}.json`;
+      a.click();
+    };
+
+    // ---------- oracle resolution text ----------
+    const numIn = $("oracle-numbers");
+    const errEl = $("oracle-error");
+    const txtEl = $("oracle-text");
+
+    function parseWinning() {
+      const raw = numIn.value.split(",").map(s => s.trim()).filter(Boolean);
+      const nums = [];
+      for (const t of raw) {
+        if (!/^-?\d+$/.test(t)) return { error: `"${t}" není celé číslo.` };
+        const n = parseInt(t, 10);
+        if (n < 1 || n > 6) return { error: `${n} je mimo rozsah 1–6.` };
+        if (!nums.includes(n)) nums.push(n);
+      }
+      if (nums.length === 0) return { error: "Zadej alespoň jedno vyhrávající číslo." };
+      nums.sort((a, b) => a - b);
+      return { nums };
+    }
+
+    function renderOracleText() {
+      const p = parseWinning();
+      if (p.error) {
+        errEl.innerHTML = `<span class="err">⚠ ${escapeHtml(p.error)}</span>`;
+        txtEl.value = "";
+        return;
+      }
+      errEl.innerHTML = "";
+      const numsList = p.nums.join(", ");
+      const numsCount = p.nums.length;
+      const probStr = `${numsCount}/6 ≈ ${(numsCount/6*100).toFixed(2)} %`;
+
+      txtEl.value =
+`========================================================================
+PROVABLY-FAIR PREDICTION MARKET — RESOLUTION CRITERIA
+Cosmic Dice via SpaceComputer cTRNG (commit-reveal)
+========================================================================
+
+OTÁZKA / QUESTION
+  Padne v cílovém losování kostka s hodnotou z množiny { ${numsList} } ?
+
+ROZHODNUTÍ / RESOLUTION
+  YES  <=>  die in { ${numsList} }
+  NO   <=>  jinak
+
+A-PRIORI PRAVDĚPODOBNOST
+  ${probStr}    (rovnoměrné, P(každé z 1..6) = 1/6)
+
+------------------------------------------------------------------------
+COMMITMENT (publikováno PŘED tím, než cílový blok existoval)
+------------------------------------------------------------------------
+  Commitment SHA-256 :
+    ${hash}
+
+  Schéma             : commit-reveal v1.0
+  Committed at (UTC) : ${new Date().toISOString()}
+  Committed at seq.  : ${currentSeq}
+
+------------------------------------------------------------------------
+ZDROJ NÁHODY (cílový beacon block)
+------------------------------------------------------------------------
+  Beacon             : SpaceComputer cTRNG (cosmic radiation)
+  Docs               : https://docs.spacecomputer.io/docs/how-to/ctrng
+  IPNS               : ${BEACON_IPNS}
+  Latest URL         : https://ipfs.io/ipns/${BEACON_IPNS}
+  Block interval     : 60 s
+
+  Target sequence    : ${targetSeq}
+  Estimated UTC time : ${new Date(targetEta * 1000).toISOString()}
+
+------------------------------------------------------------------------
+ALGORITMUS ODVOZENÍ (deterministický, ověřitelný kýmkoli)
+------------------------------------------------------------------------
+  1. Stáhni beacon block s data.sequence == ${targetSeq} z IPFS.
+     (Hash-řetěz: nejnovější blok obsahuje "previous" CID, lze projít zpět.)
+  2. raw    = bytes(ctrng[0]) || bytes(ctrng[1]) || bytes(ctrng[2])
+  3. seed   = SHA256(raw)                                  // 32 B
+  4. stream = SHA256(seed || u32be(0))
+           || SHA256(seed || u32be(1))
+           || SHA256(seed || u32be(2)) || ...              // nekonecne
+  5. Z proudu odebirej bajty; prijmi b <=> b < 252.
+     (Rejection sampling — eliminuje modulo-bias.)
+     roll = (b % 6) + 1
+  6. Prvni prijaty bajt -> die in {1..6}
+  7. Result (1..6) = die
+
+------------------------------------------------------------------------
+KONKRÉTNÍ VYHODNOCOVANÁ HODNOTA
+------------------------------------------------------------------------
+  X = die
+  Resolves YES  <=>  X in { ${numsList} }
+
+------------------------------------------------------------------------
+INTEGRITA COMMITMENTU
+------------------------------------------------------------------------
+  Commitment hash výše je SHA-256 nad kanonickou JSON serializací
+  (sort_keys=True, indent=2) všech polí kromě "commitment_sha256".
+  Plný JSON je přiložen pod tímto popisem; jakákoli změna jediného
+  bajtu změní hash a tím odhalí manipulaci.
+
+------------------------------------------------------------------------
+ROZHODČÍ POSTUP PRO ORACLE
+------------------------------------------------------------------------
+  1. Ověř, že commitment SHA-256 souhlasí s veřejně publikovaným
+     hashem (timestamp publikace MUSI predchazet timestampu ciloveho
+     beacon bloku).
+  2. Po čase ${new Date(targetEta * 1000).toISOString()} stáhni z IPFS
+     beacon block sequence=${targetSeq}.
+  3. Spočti X = die podle algoritmu výše.
+  4. YES <=> X in { ${numsList} }, jinak NO.
+  5. Reprodukovatelná referenční implementace: dice.py (Python stdlib).
+========================================================================`;
+    }
+
+    numIn.oninput = renderOracleText;
+    renderOracleText();
+
+    $("copy-oracle").onclick = () =>
+      navigator.clipboard.writeText(txtEl.value).then(() => $("copy-oracle").textContent = "Copied ✓");
+    $("download-oracle").onclick = () => {
+      const blob = new Blob([txtEl.value], { type: "text/plain" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `oracle-resolution-${hash.slice(0,8)}.txt`;
+      a.click();
+    };
+
+    refreshActive();
+  } catch (e) {
+    out.innerHTML = `<p class="err">⚠ ${escapeHtml(e.message)}</p>`;
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+$("reveal-btn").onclick = async () => { await revealCommitment(null); };
+
+async function revealCommitment(hashFilter) {
+  const out = $("reveal-output");
+  const store = loadStore();
+  if (store.length === 0) {
+    out.innerHTML = '<p class="err">No commitments stored. Create one first.</p>';
+    return;
+  }
+  let idx;
+  if (hashFilter) {
+    idx = store.findIndex(c => c.commitment_sha256 === hashFilter);
+  } else {
+    idx = [...store].map((c,i) => ({c,i})).reverse().find(x => !x.c.reveal)?.i;
+    if (idx === undefined) idx = store.length - 1;
+  }
+  if (idx < 0 || idx >= store.length) {
+    out.innerHTML = '<p class="err">Commitment not found.</p>';
+    return;
+  }
+  const c = store[idx];
+  if (c.reveal) { renderReveal(c, out); return; }
+  out.innerHTML = '<p class="loading">Fetching beacon block…</p>';
+  try {
+    const block = await fetchBlockBySequence(c.target.sequence, (walked, total) => {
+      out.innerHTML = `<p class="loading">Walking back through beacon chain… ${walked}/${total} blocks</p>`;
+    });
+    const result = await deriveDieRoll(block.data.ctrng);
+    c.reveal = {
+      beacon_sequence: block.data.sequence,
+      beacon_timestamp_unix: block.data.timestamp,
+      ctrng: block.data.ctrng,
+      seed_hex: result.seed_hex,
+      die: result.die,
+      result_1_6: result.die,
+      revealed_wall_clock_unix: Math.floor(Date.now() / 1000),
+    };
+    store[idx] = c;
+    saveStore(store);
+    renderReveal(c, out);
+    refreshActive();
+  } catch (e) {
+    out.innerHTML = `<p class="err">⚠ ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function renderReveal(c, out) {
+  const r = c.reveal;
+  out.innerHTML = `
+    <div class="result-hero">
+      <div class="die-big">${DIE_GLYPH[r.result_1_6]}</div>
+      <div class="meta">
+        <p class="meta-tag">✓ Result revealed</p>
+        <p class="meta-title">Result: ${r.result_1_6} / 6</p>
+        <p class="meta-line">commit ${c.commitment_sha256.slice(0,32)}…</p>
+        <p class="meta-line">beacon seq ${r.beacon_sequence} · ${fmtTime(r.beacon_timestamp_unix)}</p>
+      </div>
+    </div>
+    <table class="kv">
+      <tr><th>Result (1–6)</th><td><strong>${r.result_1_6}</strong> ${DIE_GLYPH[r.result_1_6]}</td></tr>
+      <tr><th>Commitment hash</th><td class="mono" style="word-break:break-all;">${c.commitment_sha256}</td></tr>
+      <tr><th>Beacon sequence</th><td><code>${r.beacon_sequence}</code></td></tr>
+      <tr><th>Beacon time</th><td>${fmtTime(r.beacon_timestamp_unix)}</td></tr>
+    </table>
+    <details>
+      <summary>Verifikační data (cTRNG hodnoty + odvozený seed)</summary>
+      <pre>cTRNG[0] = ${r.ctrng[0]}
+cTRNG[1] = ${r.ctrng[1]}
+cTRNG[2] = ${r.ctrng[2]}
+
+seed     = ${r.seed_hex}</pre>
+    </details>`;
+}
+
+function refreshActive() {
+  const store = loadStore();
+  const card = $("active-card");
+  const list = $("commitment-list");
+  if (store.length === 0) { card.style.display = "none"; return; }
+  card.style.display = "block";
+  list.innerHTML = [...store].reverse().map(c => {
+    const done = !!c.reveal;
+    const status = done
+      ? `<span class="badge done">Revealed</span> Result <strong>${c.reveal.result_1_6}</strong> ${DIE_GLYPH[c.reveal.result_1_6]}`
+      : `<span class="badge">Pending</span> target ${fmtTime(c.target.estimated_timestamp_unix)}`;
+    return `
+      <li>
+        <div><span class="hash">${c.commitment_sha256.slice(0,16)}…</span> · seq <code>${c.target.sequence}</code></div>
+        <div class="meta" style="margin-top:6px;">${status}</div>
+        ${done ? "" : `<div class="actions"><button data-hash="${c.commitment_sha256}">Reveal →</button></div>`}
+      </li>`;
+  }).join("");
+  list.querySelectorAll("button[data-hash]").forEach(b => {
+    b.onclick = () => revealCommitment(b.dataset.hash);
+  });
+}
+
+$("clear-btn").onclick = () => {
+  if (confirm("Smazat všechny uložené commitmenty?")) {
+    localStorage.removeItem(STORE_KEY);
+    refreshActive();
+    $("commit-output").innerHTML = "";
+    $("reveal-output").innerHTML = "";
+  }
+};
+
+refreshActive();
+</script>
+</body>
+</html>
