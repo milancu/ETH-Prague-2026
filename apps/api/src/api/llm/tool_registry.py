@@ -16,7 +16,6 @@ from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.lib.web3_client import Web3Client
-from api.llm.tools import apify as apify_tools
 from api.llm.tools import chain as chain_tools
 from api.llm.tools import markets as market_tools
 from api.llm.tools import prepare as prepare_tools
@@ -34,6 +33,8 @@ class ToolContext:
     chain_id: int
     user_address: str | None = None
     tx_cards: list[dict[str, Any]] = field(default_factory=list)
+    market_context: dict[str, Any] | None = None
+    intelligence_request: dict[str, Any] | None = None
 
 
 ToolCallable = Any  # async (args: dict, ctx: ToolContext) -> dict | list | str
@@ -49,6 +50,39 @@ def _require_address(ctx: ToolContext) -> str:
     if not ctx.user_address:
         raise ValueError("user_address is required for this operation")
     return ctx.user_address
+
+
+_INTELLIGENCE_PRICES: dict[str, tuple[float, str]] = {
+    "fetch_tweets": (0.50, "/v1/intelligence/tweets"),
+    "fetch_reddit": (0.50, "/v1/intelligence/reddit"),
+    "fetch_news": (0.50, "/v1/intelligence/news"),
+    "analyze_market": (0.50, "/v1/intelligence/analyze"),
+    "markets_with_buzz": (0.75, "/v1/intelligence/markets-with-buzz"),
+}
+
+
+async def _request_intelligence(
+    args: dict[str, Any], ctx: ToolContext
+) -> dict[str, Any]:
+    tool = args["tool_name"]
+    if tool not in _INTELLIGENCE_PRICES:
+        raise ValueError(f"unknown intelligence tool: {tool}")
+    query = args["query"]
+    max_items = int(args.get("max_items", 10))
+
+    price, endpoint = _INTELLIGENCE_PRICES[tool]
+    ctx.intelligence_request = {
+        "tool": tool,
+        "args": {"query": query, "max_items": max_items},
+        "price_usd": price,
+        "endpoint": endpoint,
+    }
+    return {
+        "status": "payment_required",
+        "tool": tool,
+        "price_usd": price,
+        "message": f"User must pay ${price} USDC to receive results.",
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -252,32 +286,6 @@ async def _prepare_cancel_order(
     )
     ctx.tx_cards.append(card)
     return {"status": "tx_card_created", "summary": card.get("summary", "")}
-
-
-async def _fetch_tweets(args: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
-    return await apify_tools.fetch_tweets(
-        args["query"], max_items=int(args.get("max_items", 20))
-    )
-
-
-async def _fetch_reddit(args: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
-    return await apify_tools.fetch_reddit(
-        args["query"], max_items=int(args.get("max_items", 20))
-    )
-
-
-async def _fetch_news(args: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
-    return await apify_tools.fetch_news(
-        args["query"], max_items=int(args.get("max_items", 20))
-    )
-
-
-async def _analyze_market(args: dict[str, Any], ctx: ToolContext) -> dict[str, Any]:
-    return await apify_tools.analyze_market(
-        args["market_title"],
-        category=args.get("category", "general"),
-        max_items=int(args.get("max_items", 15)),
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -518,64 +526,44 @@ _TOOL_DEFS: list[tuple[types.FunctionDeclaration, ToolCallable]] = [
         ),
         _prepare_cancel_order,
     ),
-    # -- intelligence (apify) --
+    # -- intelligence (paid via x402, mediated by frontend) --
     (
         _decl(
-            "fetch_tweets",
-            "Search Twitter/X for tweets about a topic.",
+            "request_intelligence",
+            (
+                "Request paid Apify intelligence (tweets, news, reddit, "
+                "market analysis) via the user's x402 wallet. Does NOT call "
+                "Apify directly — emits a payment request the frontend "
+                "fulfils. After the user pays, results arrive in the next "
+                "user message as `[tool_result <tool_name>]: <data>`."
+            ),
             {
-                "query": {"type": "string", "description": "Search query"},
-                "max_items": {"type": "integer", "description": "Max tweets"},
-            },
-            required=["query"],
-        ),
-        _fetch_tweets,
-    ),
-    (
-        _decl(
-            "fetch_reddit",
-            "Search Reddit for posts about a topic.",
-            {
-                "query": {"type": "string", "description": "Search query"},
-                "max_items": {"type": "integer", "description": "Max posts"},
-            },
-            required=["query"],
-        ),
-        _fetch_reddit,
-    ),
-    (
-        _decl(
-            "fetch_news",
-            "Search Google News for articles about a topic.",
-            {
-                "query": {"type": "string", "description": "Search query"},
-                "max_items": {
-                    "type": "integer",
-                    "description": "Max articles (default 20)",
-                },
-            },
-            required=["query"],
-        ),
-        _fetch_news,
-    ),
-    (
-        _decl(
-            "analyze_market",
-            "Aggregate tweets and news for a market topic. Returns raw sources.",
-            {
-                "market_title": {
+                "tool_name": {
                     "type": "string",
-                    "description": "Market title to research",
+                    "enum": [
+                        "fetch_tweets",
+                        "fetch_reddit",
+                        "fetch_news",
+                        "analyze_market",
+                        "markets_with_buzz",
+                    ],
+                    "description": "Which paid intelligence tool to invoke.",
                 },
-                "category": {"type": "string", "description": "Category hint"},
+                "query": {
+                    "type": "string",
+                    "description": (
+                        "Short search query (2-4 keywords). For "
+                        "markets_with_buzz, comma-separated market titles."
+                    ),
+                },
                 "max_items": {
                     "type": "integer",
-                    "description": "Max items per source",
+                    "description": "Max results (default 10).",
                 },
             },
-            required=["market_title"],
+            required=["tool_name", "query"],
         ),
-        _analyze_market,
+        _request_intelligence,
     ),
 ]
 

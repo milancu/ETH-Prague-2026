@@ -51,6 +51,7 @@ class ChatRequest(BaseModel):
     # The chain the user's wallet is connected to. If absent, we fall back to
     # CHAIN_ID env. Reads + TxCard calldata are scoped to this chain.
     chain_id: int | None = Field(default=None, ge=1)
+    market_id: int | None = Field(default=None, ge=1)
 
     @field_validator("user_address")
     @classmethod
@@ -73,14 +74,49 @@ class TxCardResponse(TxStep):
     notice: str | None = None
 
 
+class IntelligenceRequestResponse(BaseModel):
+    tool: str
+    args: dict[str, object]
+    price_usd: float
+    endpoint: str
+
+
 class ChatResponse(BaseModel):
     text: str
     tx_cards: list[TxCardResponse]
+    intelligence_request: IntelligenceRequestResponse | None = None
 
 
 # ---------------------------------------------------------------------------
 # POST /v1/chat
 # ---------------------------------------------------------------------------
+
+
+async def _load_market_context(
+    session: AsyncSession, market_id: int
+) -> dict[str, object]:
+    from sqlmodel import select
+
+    from api.db.models import Market
+
+    result = await session.execute(
+        select(Market).where(Market.market_id == market_id)
+    )
+    market = result.scalar_one_or_none()
+    if market is None:
+        raise HTTPException(
+            status_code=404, detail=f"Market #{market_id} not found"
+        )
+    labels = [str(o.get("label", i)) for i, o in enumerate(market.outcomes)]
+    return {
+        "market_id": market.market_id,
+        "title": market.title,
+        "category": market.category,
+        "outcome_type": market.outcome_type,
+        "outcome_labels": labels,
+        "status": market.status,
+        "expires_at": market.expires_at.isoformat() if market.expires_at else None,
+    }
 
 
 @router.post(
@@ -108,16 +144,29 @@ async def chat(
             ),
         )
 
+    market_context: dict[str, object] | None = None
+    if body.market_id is not None:
+        market_context = await _load_market_context(session, body.market_id)
+
     client = get_client(chain_id)
     ctx = ToolContext(
         session=session,
         client=client,
         chain_id=chain_id,
         user_address=body.user_address,
+        market_context=market_context,
     )
 
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
 
     result: ChatResult = await run_chat(messages, ctx)
 
-    return ChatResponse(text=result.text, tx_cards=result.tx_cards)
+    return ChatResponse(
+        text=result.text,
+        tx_cards=result.tx_cards,
+        intelligence_request=(
+            IntelligenceRequestResponse(**result.intelligence_request)
+            if result.intelligence_request is not None
+            else None
+        ),
+    )

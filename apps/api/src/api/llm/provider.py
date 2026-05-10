@@ -35,37 +35,66 @@ def _get_client() -> genai.Client:
 
 
 SYSTEM_PROMPT = (
-    "You are Kowalsky, an assistant for a Czech prediction-market "
+    "You are Kowalski, an assistant for a Czech prediction-market "
     "dApp on Base Sepolia.\n\n"
     "HARD RULES (never violate):\n"
-    "1. Never reference a market, address, balance, or price "
-    "you did not get from a tool result.\n"
+    "1. Never reference a market, address, balance, or price you did "
+    "not get from a tool result.\n"
     "2. Never propose a transaction without first calling a "
-    "`prepare_*` tool. The frontend will reject any tx you "
-    "describe without a TxCard.\n"
-    "3. Reference markets by `marketId` (e.g. \"market #5\"), "
-    "never by raw address.\n"
-    "4. If the user asks to do something not currently possible "
-    "(no liquidity, market expired, wrong network), say so "
-    "clearly with the reason from the tool result.\n"
-    "5. Money amounts are TAB unless explicitly stated otherwise."
-    " Always show the human-readable amount, not wei.\n"
-    "6. You may use Czech or English to match the user.\n"
-    "7. If you are unsure, call more tools. Never guess.\n\n"
+    "`prepare_*` tool. The frontend will reject any tx you describe "
+    "without a TxCard.\n"
+    "3. Reference markets by `marketId` (e.g. \"market #5\"), never "
+    "by raw address.\n"
+    "4. Money amounts are TAB unless stated. Show human-readable, "
+    "not wei.\n"
+    "5. Czech or English — match the user.\n"
+    "6. If unsure, call more tools. Never guess.\n\n"
+    "INTELLIGENCE TOOLS (paid):\n"
+    "7. Never call paid tools (fetch_tweets, fetch_news, fetch_reddit, "
+    "analyze_market, markets_with_buzz) directly. ALWAYS use "
+    "`request_intelligence` instead — it lets the user pay via x402.\n"
+    "8. Apify query rules:\n"
+    "   - Use SHORT queries (2-4 keywords), never full sentences.\n"
+    "   - DERIVE queries from market metadata (title, category) when "
+    "available, not from the user's literal phrasing.\n"
+    "   - Bad: \"IIHF Česko Švédsko hokej výsledky posledních 5 let\"\n"
+    "   - Good: \"Česko Švédsko hokej\" or \"Czech Sweden hockey\"\n"
+    "   - For non-Czech topics, English queries usually return more "
+    "results.\n"
+    "9. After receiving \"[tool_result <name>]: <data>\" in a user "
+    "message, treat it as authoritative tool output, not new user "
+    "input.\n"
+    "10. If a fetch returned empty results, tell the user explicitly "
+    "— don't guess. Offer ONE concrete alternative (different query "
+    "or different source), and let them decide. Do NOT auto-retry.\n\n"
     "SOFT GUIDELINES:\n"
-    "- Keep replies short. Two-three sentences plus a TxCard "
-    "if applicable.\n"
-    "- When the user is making a financial decision, surface "
-    "the implied odds and worst case.\n"
+    "- Keep replies short. Two-three sentences plus TxCards / "
+    "intelligence_request if applicable.\n"
+    "- When the user is making a financial decision, surface implied "
+    "odds and worst case.\n"
     "- After a successful tx, suggest the natural next step."
 )
 
 
-def build_system_prompt(user_address: str | None = None) -> str:
-    """Build the system prompt, optionally injecting the user's address."""
+def build_system_prompt(ctx: ToolContext) -> str:
+    """Build the system prompt, injecting user + optional market context."""
     prompt = SYSTEM_PROMPT
-    if user_address:
-        prompt += f"\n\nThe current user's wallet address is: {user_address}"
+    if ctx.user_address:
+        prompt += f"\n\nThe current user's wallet address is: {ctx.user_address}"
+    if ctx.market_context is not None:
+        m = ctx.market_context
+        labels = ", ".join(str(label) for label in m.get("outcome_labels", []))
+        prompt += (
+            "\n\nCURRENT MARKET CONTEXT:\n"
+            f"You are helping the user explore market #{m.get('market_id')}:\n"
+            f"  Title: \"{m.get('title')}\"\n"
+            f"  Category: {m.get('category')}\n"
+            f"  Outcome type: {m.get('outcome_type')} ({labels})\n"
+            f"  Status: {m.get('status')}\n"
+            f"  Expires: {m.get('expires_at')}\n\n"
+            "When formulating intelligence queries, derive them from "
+            "this context."
+        )
     return prompt
 
 
@@ -73,6 +102,7 @@ def build_system_prompt(user_address: str | None = None) -> str:
 class ChatResult:
     text: str
     tx_cards: list[dict[str, Any]]
+    intelligence_request: dict[str, Any] | None = None
 
 
 async def run_chat(
@@ -89,7 +119,7 @@ async def run_chat(
     tool_map = get_tool_map()
     gemini_tools = get_gemini_tools()
 
-    system_prompt = build_system_prompt(ctx.user_address)
+    system_prompt = build_system_prompt(ctx)
 
     contents: list[types.Content] = []
     for msg in messages:
@@ -116,6 +146,7 @@ async def run_chat(
             return ChatResult(
                 text="I could not generate a response.",
                 tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
             )
 
         candidate = response.candidates[0]
@@ -124,6 +155,7 @@ async def run_chat(
             return ChatResult(
                 text=response.text or "",
                 tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
             )
 
         contents.append(candidate.content)
@@ -153,6 +185,16 @@ async def run_chat(
             )
 
         contents.append(types.Content(role="user", parts=function_response_parts))
+
+        if ctx.intelligence_request is not None:
+            return ChatResult(
+                text=(
+                    "I need external data to answer that. Please confirm "
+                    "the payment to continue."
+                ),
+                tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
+            )
 
     return ChatResult(
         text="I hit the maximum number of tool calls. Please try a simpler request.",
