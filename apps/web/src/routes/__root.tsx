@@ -172,7 +172,7 @@ const RootLayout = () => {
         </header>
 
         {/* Body row: scrollable main + collapsible chat sidebar.
-            min-h-0 lets the ScrollArea actually constrain its child;
+            min-h-0 lets the ScrollArea actually constrain its child
             relative anchors the mobile overlay variant of the sidebar. */}
         <div className="relative flex min-h-0 flex-1">
           <ScrollArea className="min-h-0 min-w-0 flex-1">
