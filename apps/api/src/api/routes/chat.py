@@ -51,6 +51,7 @@ class ChatRequest(BaseModel):
     # The chain the user's wallet is connected to. If absent, we fall back to
     # CHAIN_ID env. Reads + TxCard calldata are scoped to this chain.
     chain_id: int | None = Field(default=None, ge=1)
+    market_id: int | None = Field(default=None, ge=1)
 
     @field_validator("user_address")
     @classmethod
@@ -83,6 +84,33 @@ class ChatResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+async def _load_market_context(
+    session: AsyncSession, market_id: int
+) -> dict[str, object]:
+    from sqlmodel import select
+
+    from api.db.models import Market
+
+    result = await session.execute(
+        select(Market).where(Market.market_id == market_id)
+    )
+    market = result.scalar_one_or_none()
+    if market is None:
+        raise HTTPException(
+            status_code=404, detail=f"Market #{market_id} not found"
+        )
+    labels = [str(o.get("label", i)) for i, o in enumerate(market.outcomes)]
+    return {
+        "market_id": market.market_id,
+        "title": market.title,
+        "category": market.category,
+        "outcome_type": market.outcome_type,
+        "outcome_labels": labels,
+        "status": market.status,
+        "expires_at": market.expires_at.isoformat() if market.expires_at else None,
+    }
+
+
 @router.post(
     "",
     response_model=ChatResponse,
@@ -108,12 +136,17 @@ async def chat(
             ),
         )
 
+    market_context: dict[str, object] | None = None
+    if body.market_id is not None:
+        market_context = await _load_market_context(session, body.market_id)
+
     client = get_client(chain_id)
     ctx = ToolContext(
         session=session,
         client=client,
         chain_id=chain_id,
         user_address=body.user_address,
+        market_context=market_context,
     )
 
     messages = [{"role": m.role, "content": m.content} for m in body.messages]
