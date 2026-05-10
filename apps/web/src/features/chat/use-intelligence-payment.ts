@@ -27,6 +27,40 @@ interface UseIntelligencePaymentResult {
   ready: boolean
 }
 
+/** x402 puts settlement details (success or failure) in base64-encoded JSON
+ *  headers. Pull out a human-readable reason if one is present. */
+function decodeReasonFromHeader(header: string | null): string | null {
+  if (!header) return null
+  try {
+    const decoded = atob(header)
+    log("decoded header", decoded)
+    const parsed = JSON.parse(decoded) as {
+      error?: unknown
+      errorReason?: unknown
+      reason?: unknown
+      message?: unknown
+    }
+    const v =
+      parsed.error ?? parsed.errorReason ?? parsed.reason ?? parsed.message
+    if (typeof v === "string" && v) return v
+  } catch {
+    /* not base64 / not JSON */
+  }
+  return null
+}
+
+function parseFailure(body: string): string | null {
+  if (!body) return null
+  try {
+    const j = JSON.parse(body) as { detail?: unknown; error?: unknown }
+    const v = j.detail ?? j.error
+    if (typeof v === "string") return v
+  } catch {
+    /* not JSON */
+  }
+  return body.length > 140 ? body.slice(0, 140) + "…" : body
+}
+
 export function useIntelligencePayment(): UseIntelligencePaymentResult {
   const { data: walletClient } = useWalletClient()
   const currentChainId = useChainId()
@@ -133,16 +167,4 @@ export function useIntelligencePayment(): UseIntelligencePaymentResult {
   )
 
   return { pay, ready: !!walletClient }
-}
-
-function parseFailure(body: string): string | null {
-  if (!body) return null
-  try {
-    const j = JSON.parse(body) as { detail?: unknown; error?: unknown }
-    const v = j.detail ?? j.error
-    if (typeof v === "string") return v
-  } catch {
-    /* not JSON */
-  }
-  return body.length > 140 ? body.slice(0, 140) + "…" : body
 }
