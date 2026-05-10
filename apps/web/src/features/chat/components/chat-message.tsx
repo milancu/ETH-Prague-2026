@@ -1,6 +1,7 @@
 import { motion } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
 import type { ChatMessage } from "../schema"
+import IntelligenceCard from "./intelligence-card"
 import KowalskyMark from "./kowalsky-mark"
 import MessageTtsButton from "./message-tts-button"
 import TxCard from "./tx-card"
@@ -53,6 +54,9 @@ const ChatMessageView = ({ message }: Props) => {
         {message.txCards?.map((card, i) => (
           <TxCard key={`${message.id}-tx-${i}`} card={card} />
         ))}
+        {message.intelligenceRequest && (
+          <IntelligenceCard request={message.intelligenceRequest} />
+        )}
       </div>
     </motion.div>
   )
