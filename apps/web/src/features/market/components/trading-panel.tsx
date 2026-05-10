@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react"
+import { AnimatePresence, LayoutGroup, motion } from "motion/react"
 import { formatEther } from "viem"
 import { useAccount, useReadContract } from "wagmi"
 import { cn } from "@workspace/ui/lib/utils"
@@ -129,91 +130,166 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
   // Key includes side so the form resets when side changes (quantity/price clear).
   const panelKey = `${slotCtx.selectedId || "none"}-${side}`
 
+  // Spring used everywhere for the sliding indicators — same feel as Sonner.
+  const SLIDE_SPRING = { type: "spring" as const, stiffness: 380, damping: 32, mass: 0.6 }
+
   return (
-    <div className={cn(
-      "flex flex-col border border-border border-t-2 bg-card/40",
-      "transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-      isBuy ? "border-t-sky-500/60" : "border-t-orange-500/60",
-    )}>
-
-      {/* Mode tabs — larger hit-area, more deliberate */}
-      <div className="flex border-b border-border">
-        {(["trade", "offer"] as const).map(m => (
-          <button key={m} onClick={() => setMode(m)}
-            className={cn(
-              "flex-1 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-widest",
-              "transition-[background-color,color,border-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
-              mode === m
-                ? "bg-foreground/[0.04] text-foreground border-b-2 border-foreground/60 -mb-px"
-                : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground/80",
-            )}
-          >
-            {m === "trade" ? "Trade now" : "Create offer"}
-          </button>
-        ))}
-      </div>
-
-      {/* Buy / Sell — segmented, side-coloured. Hint sits underneath. */}
-      <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 border-b border-border">
-        <div role="group" aria-label="Trade direction" className="grid grid-cols-2 gap-1">
-          {(["buy", "sell"] as const).map(s => {
-            const active = side === s
+    <LayoutGroup id="trading-panel">
+      <div
+        className={cn(
+          "flex flex-col border border-border border-t-2 bg-card/40",
+          "transition-colors duration-300 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          isBuy ? "border-t-sky-500/60" : "border-t-orange-500/60",
+        )}
+      >
+        {/* Mode tabs — sliding underline (Sonner-style) instead of color swap */}
+        <div className="relative flex border-b border-border">
+          {(["trade", "offer"] as const).map((m) => {
+            const active = mode === m
             return (
-              <button key={s} onClick={() => setSide(s)} aria-pressed={active}
+              <button
+                key={m}
+                onClick={() => setMode(m)}
                 className={cn(
-                  "py-2 text-[11px] font-bold uppercase tracking-widest",
-                  "transition-[background-color,color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                  "active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  "relative flex-1 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-widest",
+                  "transition-colors duration-150",
                   active
-                    ? s === "buy"
-                      ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/40"
-                      : "bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/40"
-                    : "bg-muted/40 text-muted-foreground/55 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-muted/60 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground",
+                    ? "text-foreground"
+                    : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground/80",
                 )}
               >
-                {s}
+                <span className="relative z-10">{m === "trade" ? "Trade now" : "Create offer"}</span>
+                {active && (
+                  <motion.span
+                    layoutId="trading-mode-underline"
+                    aria-hidden
+                    className="absolute inset-x-0 -bottom-px z-0 h-[2px] bg-foreground/70"
+                    transition={SLIDE_SPRING}
+                  />
+                )}
+                {active && (
+                  <motion.span
+                    layoutId="trading-mode-bg"
+                    aria-hidden
+                    className="absolute inset-0 z-0 bg-foreground/[0.04]"
+                    transition={SLIDE_SPRING}
+                  />
+                )}
               </button>
             )
           })}
         </div>
-        <span className="text-[9px] uppercase tracking-widest text-muted-foreground/35">
-          {isTradeMode ? "Fill order book instantly" : "Post limit order"}
-        </span>
-      </div>
 
-      {/* Outcome selector — pb-2 lets the form merge as one card; pb-4 (= sides)
-          when nothing follows (trade w/o pick) or a separate section does (offer's PositionsSection). */}
-      <div className={cn(
-        "px-4 pt-4",
-        selected === null ? "pb-4" : "pb-2",
-      )}>
-        <OutcomeSelector market={market} catBar={catBar} selected={selected} onSelect={handleSelectOutcome} />
-      </div>
-
-      {/* Trade now panel */}
-      {isTradeMode && selected !== null && (
-        <TradeNowPanel key={panelKey} market={market} side={side} slotCtx={slotCtx} tabBalanceNum={tabBalanceNum} />
-      )}
-
-      {/* Create offer panel + positions (offer mode only) */}
-      {!isTradeMode && (
-        <>
-          {selected !== null && (
-            <CreateOfferPanel key={panelKey} market={market} side={side} slotCtx={slotCtx} tabBalanceNum={tabBalanceNum} />
-          )}
-          <div className={cn(selected !== null && "mt-2")}>
-            <PositionsSection
-              market={market}
-              slots={slots}
-              rawBalances={rawBalances}
-              erc20Balances={erc20Balances}
-              wrappers={wrappers}
-              onRefetch={refetch}
-            />
+        {/* Buy / Sell — sliding pill that morphs color on switch */}
+        <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 border-b border-border">
+          <div
+            role="group"
+            aria-label="Trade direction"
+            className="relative grid grid-cols-2 gap-1 rounded-[2px] bg-muted/40 p-0.5"
+          >
+            {(["buy", "sell"] as const).map((s) => {
+              const active = side === s
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSide(s)}
+                  aria-pressed={active}
+                  className={cn(
+                    "relative py-2 text-[11px] font-bold uppercase tracking-widest",
+                    "transition-colors duration-150",
+                    "active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                    active
+                      ? s === "buy"
+                        ? "text-sky-200"
+                        : "text-orange-200"
+                      : "text-muted-foreground/55 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground",
+                  )}
+                >
+                  <span className="relative z-10">{s}</span>
+                  {active && (
+                    <motion.span
+                      layoutId="trading-side-pill"
+                      aria-hidden
+                      className="absolute inset-0 z-0"
+                      initial={false}
+                      animate={{
+                        backgroundColor:
+                          s === "buy" ? "rgba(14,165,233,0.18)" : "rgba(249,115,22,0.18)",
+                        boxShadow:
+                          s === "buy"
+                            ? "inset 0 0 0 1px rgba(14,165,233,0.45)"
+                            : "inset 0 0 0 1px rgba(249,115,22,0.45)",
+                      }}
+                      transition={SLIDE_SPRING}
+                    />
+                  )}
+                </button>
+              )
+            })}
           </div>
-        </>
-      )}
-    </div>
+          <span className="text-[9px] uppercase tracking-widest text-muted-foreground/35">
+            {isTradeMode ? "Fill order book instantly" : "Post limit order"}
+          </span>
+        </div>
+
+        {/* Outcome selector */}
+        <div className={cn("px-4 pt-4", selected === null ? "pb-4" : "pb-2")}>
+          <OutcomeSelector market={market} catBar={catBar} selected={selected} onSelect={handleSelectOutcome} />
+        </div>
+
+        {/* Trade form region — slide-in when an outcome is picked */}
+        <AnimatePresence initial={false}>
+          {isTradeMode && selected !== null && (
+            <motion.div
+              key="trade-form"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{
+                height: { duration: 0.24, ease: [0.23, 1, 0.32, 1] },
+                opacity: { duration: 0.18, ease: "easeOut" },
+              }}
+              style={{ overflow: "hidden" }}
+            >
+              <TradeNowPanel key={panelKey} market={market} side={side} slotCtx={slotCtx} tabBalanceNum={tabBalanceNum} />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Create offer panel + positions (offer mode only) */}
+        {!isTradeMode && (
+          <>
+            <AnimatePresence initial={false}>
+              {selected !== null && (
+                <motion.div
+                  key="offer-form"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{
+                    height: { duration: 0.24, ease: [0.23, 1, 0.32, 1] },
+                    opacity: { duration: 0.18, ease: "easeOut" },
+                  }}
+                  style={{ overflow: "hidden" }}
+                >
+                  <CreateOfferPanel key={panelKey} market={market} side={side} slotCtx={slotCtx} tabBalanceNum={tabBalanceNum} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+            <div className={cn(selected !== null && "mt-2")}>
+              <PositionsSection
+                market={market}
+                slots={slots}
+                rawBalances={rawBalances}
+                erc20Balances={erc20Balances}
+                wrappers={wrappers}
+                onRefetch={refetch}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    </LayoutGroup>
   )
 }
 
