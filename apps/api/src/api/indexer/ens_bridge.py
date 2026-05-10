@@ -44,6 +44,11 @@ _ENABLED = os.getenv("ENS_BRIDGE_ENABLED", "") == "1"
 _BASE_SEPOLIA_CHAIN = 84532
 _ETH_SEPOLIA_CHAIN = 11155111
 
+_PUBLIC_API_BASE = os.getenv(
+    "PUBLIC_API_BASE_URL", "https://api.kowalski-market.com"
+)
+_INTELLIGENCE_PRICE_USDC_6 = "500000"  # $0.50 in USDC 6-decimal units
+
 _BUNDLED_ABI_DIR = Path(__file__).parent.parent / "abi"
 _ARTIFACTS_ROOT = (
     Path(__file__).parent.parent.parent.parent.parent.parent
@@ -175,8 +180,11 @@ class ENSBridge:
                 "marketId": str(market_id),
                 "status": "ACTIVE",
                 "outcome": "pending",
-                "expiresAt": str(market[11]),  # expiresAt index
-                "creator": market[0],  # creator address
+                "expiresAt": str(market[11]),
+                "creator": market[0],
+                "api": f"{_PUBLIC_API_BASE}/v1/intelligence/analyze",
+                "api-input": json.dumps({"market_title": market[6]}),
+                "price": _INTELLIGENCE_PRICE_USDC_6,
             }
 
             try:
