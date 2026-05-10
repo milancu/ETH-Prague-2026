@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from unittest.mock import patch
 
 import pytest
@@ -13,7 +14,7 @@ from api.llm.provider import ChatResult
 
 
 @pytest.fixture(autouse=True)
-async def _schema():
+async def _schema() -> AsyncIterator[None]:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
     yield
@@ -22,7 +23,7 @@ async def _schema():
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncIterator[AsyncClient]:
     from api.main import app
 
     transport = ASGITransport(app=app)

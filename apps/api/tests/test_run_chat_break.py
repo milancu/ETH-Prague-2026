@@ -19,7 +19,7 @@ def _ctx() -> ToolContext:
     )
 
 
-def _fake_response_with_call(name: str, args: dict) -> SimpleNamespace:
+def _fake_response_with_call(name: str, args: dict[str, object]) -> SimpleNamespace:
     """Construct a stand-in for genai's GenerateContentResponse."""
     fn_call = SimpleNamespace(name=name, args=args)
     candidate = SimpleNamespace(

@@ -59,6 +59,7 @@ async def test_request_intelligence_premium_price_for_buzz() -> None:
         {"tool_name": "markets_with_buzz", "query": "ignored", "max_items": 5},
         ctx,
     )
+    assert ctx.intelligence_request is not None
     assert ctx.intelligence_request["price_usd"] == 0.75
     assert ctx.intelligence_request["endpoint"] == "/v1/intelligence/markets-with-buzz"
 
@@ -76,4 +77,5 @@ async def test_request_intelligence_default_max_items() -> None:
     ctx = _ctx()
     fn = get_tool_map()["request_intelligence"]
     await fn({"tool_name": "fetch_news", "query": "Bitcoin"}, ctx)
+    assert ctx.intelligence_request is not None
     assert ctx.intelligence_request["args"]["max_items"] == 10
