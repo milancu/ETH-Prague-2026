@@ -146,7 +146,7 @@ async def test_free_route_not_blocked_by_paywall(
 ) -> None:
     """Paywall must NOT intercept non-intelligence routes."""
     monkeypatch.setenv("X402_IN_WALLET_ADDRESS", RECEIVE_ADDR)
-    resp = await client.get("/health")
+    resp = await client.get("/v1/health")
     assert resp.status_code == 200
     resp2 = await client.get("/v1/markets")
     assert resp2.status_code == 200

@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from api.lib.web3_client import Web3Client
 from api.llm.tools import apify as apify_tools
 from api.llm.tools import chain as chain_tools
+from api.llm.tools import dice as dice_tools
 from api.llm.tools import markets as market_tools
 from api.llm.tools import prepare as prepare_tools
 from api.llm.tools.markets import get_market_model, get_orders_for_market
@@ -280,6 +281,62 @@ async def _analyze_market(args: dict[str, Any], ctx: ToolContext) -> dict[str, A
     )
 
 
+async def _prepare_resolve_market(
+    args: dict[str, Any], ctx: ToolContext
+) -> dict[str, Any]:
+    card = await asyncio.to_thread(
+        prepare_tools.prepare_resolve_market,
+        ctx.client,
+        int(args["market_id"]),
+        [int(p) for p in args["payouts"]],
+        ctx.chain_id,
+    )
+    ctx.tx_cards.append(card)
+    return {"status": "tx_card_created", "summary": card.get("summary", "")}
+
+
+async def _prepare_create_dice_market(
+    args: dict[str, Any], ctx: ToolContext
+) -> dict[str, Any]:
+    address = _require_address(ctx)
+    result = await dice_tools.prepare_create_dice_market(
+        ctx.session,
+        ctx.client,
+        args["name"],
+        args.get("description", ""),
+        float(args.get("delay_minutes", 5)),
+        address,
+        ctx.chain_id,
+    )
+    if "tx_card" in result:
+        ctx.tx_cards.append(result["tx_card"])
+    return result
+
+
+async def _link_dice_market(
+    args: dict[str, Any], ctx: ToolContext
+) -> dict[str, Any]:
+    return await dice_tools.link_dice_market(
+        ctx.session,
+        int(args["commitment_id"]),
+        int(args["market_id"]),
+    )
+
+
+async def _reveal_dice_market(
+    args: dict[str, Any], ctx: ToolContext
+) -> dict[str, Any]:
+    result = await dice_tools.reveal_dice_market(
+        ctx.session,
+        ctx.client,
+        int(args["commitment_id"]),
+        ctx.chain_id,
+    )
+    if "tx_card" in result:
+        ctx.tx_cards.append(result["tx_card"])
+    return result
+
+
 # ---------------------------------------------------------------------------
 # Gemini function declarations
 # ---------------------------------------------------------------------------
@@ -517,6 +574,85 @@ _TOOL_DEFS: list[tuple[types.FunctionDeclaration, ToolCallable]] = [
             required=["order_id"],
         ),
         _prepare_cancel_order,
+    ),
+    # -- resolve --
+    (
+        _decl(
+            "prepare_resolve_market",
+            "Build resolveMarket calldata. Only callable by oracle or creator.",
+            {
+                "market_id": {"type": "integer", "description": "On-chain market ID"},
+                "payouts": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "Payout vector (one entry per outcome slot)",
+                },
+            },
+            required=["market_id", "payouts"],
+        ),
+        _prepare_resolve_market,
+    ),
+    # -- dice (SpaceComputer cTRNG) --
+    (
+        _decl(
+            "prepare_create_dice_market",
+            (
+                "Create a cosmic dice market powered by SpaceComputer cTRNG. "
+                "Returns a TxCard for createMarket + a commitment for later reveal."
+            ),
+            {
+                "name": {"type": "string", "description": "Market title"},
+                "description": {"type": "string", "description": "Market description"},
+                "delay_minutes": {
+                    "type": "number",
+                    "description": "Minutes until the dice roll (default 5)",
+                },
+            },
+            required=["name"],
+        ),
+        _prepare_create_dice_market,
+    ),
+    (
+        _decl(
+            "link_dice_market",
+            (
+                "Link an on-chain market_id to a dice commitment after "
+                "the user signs the createMarket transaction."
+            ),
+            {
+                "commitment_id": {
+                    "type": "integer",
+                    "description": (
+                        "DiceCommitment DB ID from "
+                        "prepare_create_dice_market"
+                    ),
+                },
+                "market_id": {
+                    "type": "integer",
+                    "description": "On-chain market ID from the confirmed tx",
+                },
+            },
+            required=["commitment_id", "market_id"],
+        ),
+        _link_dice_market,
+    ),
+    (
+        _decl(
+            "reveal_dice_market",
+            (
+                "Reveal a cosmic dice result and build resolveMarket calldata. "
+                "Fetches the committed beacon block and derives "
+                "the die roll."
+            ),
+            {
+                "commitment_id": {
+                    "type": "integer",
+                    "description": "DiceCommitment DB ID",
+                },
+            },
+            required=["commitment_id"],
+        ),
+        _reveal_dice_market,
     ),
     # -- intelligence (apify) --
     (

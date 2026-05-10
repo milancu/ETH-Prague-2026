@@ -45,3 +45,4 @@ __pycache__/
 .claude/settings.local.json
 # Third-party skill from skills-lock.json (each dev re-installs locally; project-specific skills stay tracked)
 .claude/skills/monorepo-management/
+_reference/

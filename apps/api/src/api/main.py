@@ -15,6 +15,7 @@ from api.mcp.server import mcp as mcp_server
 from api.routes import comments, markets, orders
 from api.routes.chat import limiter
 from api.routes.chat import router as chat_router
+from api.routes.dice import router as dice_router
 from api.routes.ens_discovery import router as ens_discovery_router
 from api.routes.ens_gateway import router as ens_gateway_router
 from api.routes.intelligence import router as intelligence_router
@@ -125,6 +126,7 @@ app.include_router(balance_router)
 app.include_router(orders.router)
 app.include_router(comments.router)
 app.include_router(prepare_router)
+app.include_router(dice_router)
 app.include_router(intelligence_router)
 app.include_router(chat_router)
 app.include_router(ens_gateway_router)

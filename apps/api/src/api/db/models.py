@@ -105,3 +105,27 @@ class Order(SQLModel, table=True):
     verifying_contract: str = Field(max_length=42)
     signature: str = Field(max_length=132)
     note: str | None = Field(default=None, max_length=512)
+
+
+class DiceCommitment(SQLModel, table=True):
+    """Commit-reveal state for a SpaceComputer cTRNG dice market."""
+
+    __tablename__ = "dice_commitments"
+
+    id: int | None = Field(default=None, primary_key=True)
+    created_at: datetime = Field(default_factory=_utc_now)
+
+    market_id: int | None = Field(default=None, index=True)
+
+    commitment_hash: str = Field(unique=True, max_length=64)
+    target_sequence: int
+    delay_minutes: float
+    current_sequence: int
+    estimated_reveal_unix: int
+
+    ctrng: list[str] | None = Field(
+        default=None, sa_column=Column(JSON, nullable=True)
+    )
+    seed_hex: str | None = Field(default=None, max_length=64)
+    result: int | None = None
+    revealed_at: datetime | None = None
