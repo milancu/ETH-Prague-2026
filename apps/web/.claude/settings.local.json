@@ -22,7 +22,10 @@
       "Bash(curl -sf http://127.0.0.1:8000/v1/health)",
       "Bash(curl *)",
       "Bash(pnpm exec *)",
-      "Bash(pnpm lint *)"
+      "Bash(pnpm lint *)",
+      "Read(//c/tmp/x402test/node_modules/@x402/evm/**)",
+      "Read(//c/tmp/x402test/**)",
+      "Bash(pnpm view *)"
     ]
   },
   "disabledMcpjsonServers": [
