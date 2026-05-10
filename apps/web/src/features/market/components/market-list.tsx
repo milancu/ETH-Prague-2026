@@ -41,7 +41,13 @@ export function MarketList() {
                 : `${total} active prediction markets`}
           </p>
         </div>
-        <CreateMarketDialog />
+        <motion.div
+          layout
+          layoutId="add-market-button"
+          transition={{ type: "spring", duration: 0.4, bounce: 0 }}
+        >
+          <CreateMarketDialog />
+        </motion.div>
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">

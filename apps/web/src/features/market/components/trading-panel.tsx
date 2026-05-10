@@ -131,21 +131,21 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
 
   return (
     <div className={cn(
-      "flex flex-col border border-border border-t-2",
+      "flex flex-col border border-border border-t-2 bg-card/40",
       "transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-      isBuy ? "border-t-sky-500/50" : "border-t-orange-500/50",
+      isBuy ? "border-t-sky-500/60" : "border-t-orange-500/60",
     )}>
 
-      {/* Mode tabs */}
+      {/* Mode tabs — larger hit-area, more deliberate */}
       <div className="flex border-b border-border">
         {(["trade", "offer"] as const).map(m => (
           <button key={m} onClick={() => setMode(m)}
             className={cn(
-              "flex-1 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest",
+              "flex-1 px-4 py-3.5 text-[11px] font-semibold uppercase tracking-widest",
               "transition-[background-color,color,border-color] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
               mode === m
-                ? "bg-foreground/5 text-foreground border-b-2 border-foreground/50 -mb-px"
-                : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground",
+                ? "bg-foreground/[0.04] text-foreground border-b-2 border-foreground/60 -mb-px"
+                : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground/80",
             )}
           >
             {m === "trade" ? "Trade now" : "Create offer"}
@@ -153,33 +153,40 @@ function UnifiedTradingPanel({ market }: { market: Market }) {
         ))}
       </div>
 
-      {/* Buy / Sell toggle */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+      {/* Buy / Sell — segmented, side-coloured. Hint sits underneath. */}
+      <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 border-b border-border">
+        <div role="group" aria-label="Trade direction" className="grid grid-cols-2 gap-1">
+          {(["buy", "sell"] as const).map(s => {
+            const active = side === s
+            return (
+              <button key={s} onClick={() => setSide(s)} aria-pressed={active}
+                className={cn(
+                  "py-2 text-[11px] font-bold uppercase tracking-widest",
+                  "transition-[background-color,color,box-shadow,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
+                  "active:scale-[0.98] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+                  active
+                    ? s === "buy"
+                      ? "bg-sky-500/15 text-sky-300 ring-1 ring-sky-500/40"
+                      : "bg-orange-500/15 text-orange-300 ring-1 ring-orange-500/40"
+                    : "bg-muted/40 text-muted-foreground/55 [@media(hover:hover)_and_(pointer:fine)]:hover:bg-muted/60 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground",
+                )}
+              >
+                {s}
+              </button>
+            )
+          })}
+        </div>
         <span className="text-[9px] uppercase tracking-widest text-muted-foreground/35">
           {isTradeMode ? "Fill order book instantly" : "Post limit order"}
         </span>
-        <div role="group" aria-label="Trade direction" className="flex items-center gap-0.5">
-          {(["buy", "sell"] as const).map(s => (
-            <button key={s} onClick={() => setSide(s)} aria-pressed={side === s}
-              className={cn(
-                "px-3 py-1 text-[11px] font-bold uppercase tracking-widest",
-                "transition-[background-color,color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
-                "active:scale-[0.97] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
-                side === s
-                  ? s === "buy"
-                    ? "bg-sky-500/15 text-sky-400 ring-1 ring-sky-500/25"
-                    : "bg-orange-500/15 text-orange-400 ring-1 ring-orange-500/25"
-                  : "text-muted-foreground/50 [@media(hover:hover)_and_(pointer:fine)]:hover:text-muted-foreground",
-              )}
-            >
-              {s}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Outcome selector */}
-      <div className="p-4">
+      {/* Outcome selector — pb-2 lets the form merge as one card; pb-4 (= sides)
+          when nothing follows (trade w/o pick) or a separate section does (offer's PositionsSection). */}
+      <div className={cn(
+        "px-4 pt-4",
+        selected === null ? "pb-4" : "pb-2",
+      )}>
         <OutcomeSelector market={market} catBar={catBar} selected={selected} onSelect={handleSelectOutcome} />
       </div>
 

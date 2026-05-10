@@ -239,7 +239,6 @@ function LevelRow({
   maxAmt: number
   side: "ask" | "bid"
   barClass: string
-  palette: Palette
 }) {
   const depthPct = maxAmt > 0 ? (level.amount / maxAmt) * 100 : 0
   const priceColor = side === "ask" ? "text-rose-400" : "text-emerald-400"
@@ -325,7 +324,7 @@ function SideTabs({
 // ── Single book view ──────────────────────────────────────────────────────────
 
 function SingleBookView({ book }: { book: Book }) {
-  const { asks, bids, spread, midPrice, palette, hasOrders } = book
+  const { asks, bids, spread, hasOrders } = book
 
   // ASK display: high → low (highest at top, best/lowest ask nearest spread)
   const visAsks = asks.slice(-MAX_ROWS).reverse()
@@ -335,21 +334,9 @@ function SingleBookView({ book }: { book: Book }) {
 
   return (
     <div className="flex flex-col">
-      {/* Column headers + mid price */}
+      {/* Column headers */}
       <div className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5">
-        <div className="flex flex-1 items-center gap-1.5">
-          <span className="text-[9px] tracking-widest text-muted-foreground/30 uppercase">
-            mid
-          </span>
-          <span
-            className={cn(
-              "font-mono text-[11px] font-semibold tabular-nums",
-              palette.label
-            )}
-          >
-            {midPrice !== null ? midPrice.toFixed(3) : "—"}
-          </span>
-        </div>
+        <div className="flex-1" />
         <span className="w-12 text-right text-[9px] tracking-widest text-muted-foreground/25 uppercase">
           Price
         </span>
@@ -391,7 +378,6 @@ function SingleBookView({ book }: { book: Book }) {
                   maxAmt={maxAmt}
                   side="ask"
                   barClass={ASK_BAR}
-                  palette={palette}
                 />
               ))
             )}
@@ -440,7 +426,6 @@ function SingleBookView({ book }: { book: Book }) {
                   maxAmt={maxAmt}
                   side="bid"
                   barClass={BID_BAR}
-                  palette={palette}
                 />
               ))
             )}

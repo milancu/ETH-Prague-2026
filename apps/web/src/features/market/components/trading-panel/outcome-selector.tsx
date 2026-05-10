@@ -25,18 +25,18 @@ function BinarySelector({ market, selected, onSelect }: {
         return (
           <button key={id} aria-pressed={active} onClick={() => onSelect(active ? null : id)}
             className={cn(
-              "flex items-center gap-3 px-3 py-2",
+              "flex items-center gap-3 px-3.5 py-3",
               "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
               active ? cn(activeBg, "ring-1", ring) : "bg-muted hover:bg-muted/60",
             )}
           >
-            <span className={cn("w-7 shrink-0 text-[11px] font-bold tracking-widest", text)}>{label}</span>
+            <span className={cn("w-9 shrink-0 text-xs font-bold tracking-widest", text)}>{label}</span>
             <Progress value={price} className="flex-1">
-              <ProgressTrack className="h-1 w-full overflow-hidden bg-white/8">
+              <ProgressTrack className="h-1.5 w-full overflow-hidden bg-white/8">
                 <ProgressIndicator className={cn("h-full", bar)} />
               </ProgressTrack>
             </Progress>
-            <span className={cn("w-10 shrink-0 text-right text-xs font-bold tabular-nums", text)}>{price}%</span>
+            <span className={cn("w-12 shrink-0 text-right text-sm font-bold tabular-nums", text)}>{price}%</span>
           </button>
         )
       })}
@@ -60,18 +60,20 @@ function MultiSelector({ market, catBar, selected, onSelect }: {
         return (
           <button key={outcome.id} aria-pressed={active} onClick={() => onSelect(active ? null : outcome.id)}
             className={cn(
-              "flex items-center gap-3 px-3 py-2",
+              "flex flex-col gap-2 px-3.5 py-3",
               "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
               active ? cn(pal.activeBg, "ring-1", pal.ring) : "bg-muted hover:bg-muted/60",
             )}
           >
-            <Progress value={outcome.price} className="flex-1">
-              <ProgressTrack className="h-1 w-full overflow-hidden bg-white/8">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-sm font-medium text-foreground text-left">{outcome.label}</span>
+              <span className="shrink-0 text-sm font-semibold tabular-nums text-muted-foreground">{outcome.price}%</span>
+            </div>
+            <Progress value={outcome.price} className="w-full">
+              <ProgressTrack className="h-1.5 w-full overflow-hidden bg-white/8">
                 <ProgressIndicator className={cn("h-full", catBar)} />
               </ProgressTrack>
             </Progress>
-            <span className="shrink-0 text-xs font-medium text-foreground">{outcome.label}</span>
-            <span className="w-10 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">{outcome.price}%</span>
           </button>
         )
       })}
@@ -111,13 +113,13 @@ function ScalarSelector({ market, selected, onSelect }: {
           return (
             <button key={id} aria-pressed={active} onClick={() => onSelect(active ? null : id)}
               className={cn(
-                "flex items-center justify-between px-3 py-2",
+                "flex items-center justify-between px-3.5 py-3",
                 "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.98]",
                 active ? cn(activeBg, "ring-1", ring) : "bg-muted hover:bg-muted/60",
               )}
             >
-              <span className={cn("text-[11px] font-bold tracking-widest", text)}>{label}</span>
-              <span className="text-[10px] tabular-nums text-muted-foreground">{hint}</span>
+              <span className={cn("text-xs font-bold tracking-widest", text)}>{label}</span>
+              <span className="text-[11px] tabular-nums text-muted-foreground">{hint}</span>
             </button>
           )
         })}

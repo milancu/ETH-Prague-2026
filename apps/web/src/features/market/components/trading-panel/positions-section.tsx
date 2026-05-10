@@ -147,13 +147,14 @@ export function PositionsSection({
             disabled={splitting}
           />
           <Button
+            size={'lg'}
             onClick={handleMint}
             disabled={
               Number(mintAmount) <= 0 ||
               splitting ||
               (tabBalanceNum > 0 && parseFloat(mintAmount) > tabBalanceNum)
             }
-            className="shrink-0 active:scale-[0.97]"
+            className="shrink-0 active:scale-[0.97] h-10"
           >
             {splitting ? "Minting…" : "Mint"}
           </Button>

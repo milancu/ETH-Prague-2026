@@ -195,7 +195,7 @@ export function CreateOfferPanel({
             onClick={() => adjustPrice(-0.01)}
             aria-label="Decrease price by 0.01"
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center",
+              "flex h-11 w-11 shrink-0 items-center justify-center",
               "border border-r-0 border-input text-muted-foreground",
               "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-accent [@media(hover:hover)_and_(pointer:fine)]:hover:text-foreground",
               "transition-colors duration-100 active:scale-[0.94]"
@@ -213,7 +213,7 @@ export function CreateOfferPanel({
               max="1"
               step="0.01"
               className={cn(
-                "h-9 rounded-none pr-12 text-center font-mono tabular-nums",
+                "h-11 rounded-none pr-12 text-center text-base font-semibold font-mono tabular-nums md:text-base",
                 priceOverOne &&
                   "border-amber-500/50 focus-visible:ring-amber-500/30"
               )}
@@ -230,7 +230,7 @@ export function CreateOfferPanel({
             onClick={() => adjustPrice(+0.01)}
             aria-label="Increase price by 0.01"
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center",
+              "flex h-11 w-11 shrink-0 items-center justify-center",
               "border border-l-0 border-input text-muted-foreground",
               "[@media(hover:hover)_and_(pointer:fine)]:hover:bg-accent [@media(hover:hover)_and_(pointer:fine)]:hover:text-foreground",
               "transition-colors duration-100 active:scale-[0.94]"
@@ -359,7 +359,14 @@ export function CreateOfferPanel({
       <Button
         onClick={handlePlaceOffer}
         disabled={isDisabled}
-        className="w-full transition-transform duration-100 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97]"
+        className={cn(
+          "mt-1 h-12 w-full text-sm font-bold uppercase tracking-wider",
+          "transition-[transform,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
+          "active:scale-[0.98]",
+          isBuy
+            ? "bg-sky-500/90 text-white shadow-[0_8px_24px_-12px] shadow-sky-500/60 hover:bg-sky-500 disabled:bg-sky-500/30"
+            : "bg-orange-500/90 text-white shadow-[0_8px_24px_-12px] shadow-orange-500/60 hover:bg-orange-500 disabled:bg-orange-500/30",
+        )}
       >
         {actionLabel()}
       </Button>

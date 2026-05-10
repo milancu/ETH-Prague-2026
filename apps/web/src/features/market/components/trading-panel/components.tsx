@@ -20,9 +20,10 @@ export function AmountInput({ value, onChange, unit, label, disabled, placeholde
       <Input
         type="number" value={value} onChange={e => onChange(e.target.value)}
         placeholder={placeholder ?? "0"} min="0" aria-label={label}
-        className="pr-12" disabled={disabled}
+        className="h-11 pr-14 text-base font-semibold tabular-nums md:text-base"
+        disabled={disabled}
       />
-      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+      <span aria-hidden className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-[10px] font-bold tracking-widest text-muted-foreground/70 uppercase">
         {unit}
       </span>
     </div>

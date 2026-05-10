@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react"
 import { parseEther } from "viem"
 import { Info } from "lucide-react"
+import { cn } from "@workspace/ui/lib/utils"
 import { Button } from "@workspace/ui/components/button"
 import { useOrders } from "@/features/orders/hooks/use-orders"
 import { useFillOrder } from "@/features/orders/hooks/use-fill-order"
@@ -255,7 +256,14 @@ export function TradeNowPanel({ market, side, slotCtx, tabBalanceNum }: Props) {
           <Button
             onClick={handleTrade}
             disabled={isDisabled}
-            className="w-full transition-transform duration-100 ease-[cubic-bezier(0.23,1,0.32,1)] active:scale-[0.97]"
+            className={cn(
+              "mt-1 h-12 w-full text-sm font-bold uppercase tracking-wider",
+              "transition-[transform,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
+              "active:scale-[0.98]",
+              isBuy
+                ? "bg-sky-500/90 text-white shadow-[0_8px_24px_-12px] shadow-sky-500/60 hover:bg-sky-500 disabled:bg-sky-500/30"
+                : "bg-orange-500/90 text-white shadow-[0_8px_24px_-12px] shadow-orange-500/60 hover:bg-orange-500 disabled:bg-orange-500/30",
+            )}
           >
             {actionLabel()}
           </Button>

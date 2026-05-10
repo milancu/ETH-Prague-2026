@@ -1,10 +1,10 @@
-import { useState, useRef, useMemo, useCallback } from "react"
-import { motion, useSpring, useMotionTemplate } from "motion/react"
+import { useCallback, useMemo, useRef, useState } from "react"
+import { motion, useMotionTemplate, useSpring } from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
 import {
   Tooltip,
-  TooltipTrigger,
   TooltipPanel,
+  TooltipTrigger,
 } from "@/components/animate-ui/components/base/tooltip"
 import type { Market } from "@/features/market/types"
 
@@ -17,24 +17,49 @@ const SLOW_SPRING = { damping: 40 } as const
 type Timeframe = "1D" | "1W" | "1M" | "ALL"
 
 interface ChartPoint {
-  t: number       // 0–1 normalized x position
-  price: number   // 0–1 probability
-  volume: number  // 0–1 normalized
+  t: number // 0–1 normalized x position
+  price: number // 0–1 probability
+  volume: number // 0–1 normalized
   date: Date
 }
 
 interface ChartEvent {
-  offsetDays: number  // days before now
-  label: string       // short label shown in tooltip header
+  offsetDays: number // days before now
+  label: string // short label shown in tooltip header
   description: string
 }
 
 const CHART_EVENTS: ChartEvent[] = [
-  { offsetDays: 78, label: "25% Tariffs Announced", description: "Trump announced 25% tariffs on European imports. Markets reacted with a sharp sell-off." },
-  { offsetDays: 55, label: "Fed Holds Rates", description: "The Fed kept interest rates unchanged at 5.25%. Chair Powell: inflation is under control." },
-  { offsetDays: 38, label: "Poll: +4 pp", description: "STEM poll: support for the leading candidate rose to 54%, up 4 points from last month." },
-  { offsetDays: 17, label: "Primary Results", description: "Primary results: frontrunner leads with 52% of votes, second-place rival drops out." },
-  { offsetDays: 4, label: "TV Debate", description: "Presidential debate: commentators rate the performance as decisive for the election outcome." },
+  {
+    offsetDays: 78,
+    label: "25% Tariffs Announced",
+    description:
+      "Market reacted with a sharp sell-off following the announcement of new trade tariffs.",
+  },
+  {
+    offsetDays: 55,
+    label: "Fed Holds Rates",
+    description:
+      "The Fed kept interest rates unchanged. Chair Powell noted that inflation is under control.",
+  },
+  {
+    offsetDays: 38,
+    label: "Poll: +4 pp",
+    description:
+      "Latest polling data shows support for the leading candidate rose to 54%.",
+  },
+  {
+    offsetDays: 17,
+    label: "Primary Results",
+    description:
+      "Frontrunner leads with 52% of votes; the primary rival has suspended their campaign.",
+  },
+  {
+    offsetDays: 4,
+    label: "TV Debate",
+    description:
+      "Commentators rate the performance as decisive for the final election outcome.",
+  },
 ]
 
 // ── Deterministic mock data ────────────────────────────────────────────────────
@@ -49,7 +74,8 @@ function lcg(seed: number) {
 
 function hashStr(s: string): number {
   let h = 5381
-  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+  for (let i = 0; i < s.length; i++)
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
   return h >>> 0
 }
 
@@ -64,9 +90,14 @@ const DURATIONS: Record<Timeframe, number> = {
   "1D": 24 * 3_600_000,
   "1W": 7 * 24 * 3_600_000,
   "1M": 30 * 24 * 3_600_000,
-  "ALL": 90 * 24 * 3_600_000,
+  ALL: 90 * 24 * 3_600_000,
 }
-const COUNTS: Record<Timeframe, number> = { "1D": 48, "1W": 56, "1M": 60, "ALL": 80 }
+const COUNTS: Record<Timeframe, number> = {
+  "1D": 48,
+  "1W": 56,
+  "1M": 60,
+  ALL: 80,
+}
 
 function makeData(market: Market, tf: Timeframe): ChartPoint[] {
   const target = resolveCurrentPrice(market)
@@ -124,8 +155,8 @@ function pathArea(pts: ChartPoint[]): string {
 
 function fmtLabel(d: Date, tf: Timeframe): string {
   return tf === "1D"
-    ? d.toLocaleTimeString("cs-CZ", { hour: "2-digit", minute: "2-digit" })
-    : d.toLocaleDateString("cs-CZ", { day: "numeric", month: "short" })
+    ? d.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })
+    : d.toLocaleDateString("en-US", { day: "numeric", month: "short" })
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -137,7 +168,6 @@ export function MarketPriceChart({ market }: { market: Market }) {
   const containerRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Emil Kowalski: two springs — fast while hovering, slow on release
   const clipSpring = useSpring(0, hovering ? SPRING : SLOW_SPRING)
   const clipPath = useMotionTemplate`inset(0px ${clipSpring}% 0px 0px)`
 
@@ -149,7 +179,7 @@ export function MarketPriceChart({ market }: { market: Market }) {
     const now = Date.now()
     const dur = DURATIONS[tf]
     const rangeStart = now - dur
-    return CHART_EVENTS.flatMap(ev => {
+    return CHART_EVENTS.flatMap((ev) => {
       const evMs = now - ev.offsetDays * 24 * 3_600_000
       if (evMs <= rangeStart || evMs >= now) return []
       return [{ ...ev, xPct: ((evMs - rangeStart) / dur) * 100 }]
@@ -157,10 +187,14 @@ export function MarketPriceChart({ market }: { market: Market }) {
   }, [tf])
 
   const hovIdx = useMemo(
-    () => hovering
-      ? Math.min(data.length - 1, Math.max(0, Math.round((xPct / 100) * (data.length - 1))))
-      : data.length - 1,
-    [hovering, xPct, data.length],
+    () =>
+      hovering
+        ? Math.min(
+            data.length - 1,
+            Math.max(0, Math.round((xPct / 100) * (data.length - 1)))
+          )
+        : data.length - 1,
+    [hovering, xPct, data.length]
   )
 
   const pt = data[hovIdx]!
@@ -169,14 +203,16 @@ export function MarketPriceChart({ market }: { market: Market }) {
   const delta = last.price - first.price
   const isUp = delta >= 0
 
-  const onMove = useCallback((e: React.PointerEvent) => {
-    if (!containerRef.current) return
-    const { left, width } = containerRef.current.getBoundingClientRect()
-    const pct = Math.max(0, Math.min(100, ((e.clientX - left) / width) * 100))
-    setXPct(pct)
-    // reveal colored layer left of cursor — right inset = 100 - cursor%
-    clipSpring.set(100 - pct)
-  }, [clipSpring])
+  const onMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!containerRef.current) return
+      const { left, width } = containerRef.current.getBoundingClientRect()
+      const pct = Math.max(0, Math.min(100, ((e.clientX - left) / width) * 100))
+      setXPct(pct)
+      clipSpring.set(100 - pct)
+    },
+    [clipSpring]
+  )
 
   const onEnter = useCallback(() => {
     setHovering(true)
@@ -185,50 +221,56 @@ export function MarketPriceChart({ market }: { market: Market }) {
 
   const onLeave = useCallback(() => {
     setHovering(false)
-    // reset to default beautiful state (full colored layer) after 1s
     timerRef.current = setTimeout(() => clipSpring.set(0), 1000)
   }, [clipSpring])
 
-  const outcomeLabel = market.outcomeType === "binary" ? "YES" : market.outcomeType === "multi" ? market.outcomes[0]?.label : undefined
+  const outcomeLabel =
+    market.outcomeType === "binary"
+      ? "YES"
+      : market.outcomeType === "multi"
+        ? market.outcomes[0]?.label
+        : undefined
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Header row: price + delta + timeframe tabs */}
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-baseline gap-2.5">
-            <span className="text-2xl font-semibold tabular-nums tracking-tight text-foreground">
+            <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
               {(pt.price * 100).toFixed(1)}%
             </span>
-            <span className={cn(
-              "text-xs font-medium tabular-nums transition-colors duration-100",
-              hovering
-                ? "text-muted-foreground/60"
-                : isUp ? "text-emerald-400" : "text-rose-400",
-            )}>
+            <span
+              className={cn(
+                "text-xs font-medium tabular-nums transition-colors duration-100",
+                hovering
+                  ? "text-muted-foreground/60"
+                  : isUp
+                    ? "text-emerald-400"
+                    : "text-rose-400"
+              )}
+            >
               {hovering
                 ? fmtLabel(pt.date, tf)
                 : `${isUp ? "+" : ""}${(delta * 100).toFixed(1)} pp`}
             </span>
           </div>
-          <span className="text-[10px] uppercase tracking-widest text-muted-foreground/50">
-            {outcomeLabel ? `${outcomeLabel} pravděpodobnost` : "Pravděpodobnost"}
+          <span className="text-[10px] tracking-widest text-muted-foreground/50 uppercase">
+            {outcomeLabel ? `${outcomeLabel} Probability` : "Probability"}
           </span>
         </div>
 
-        {/* Timeframe selector */}
         <div className="flex">
           {(["1D", "1W", "1M", "ALL"] as const).map((t, i) => (
             <button
               key={t}
               onClick={() => setTf(t)}
               className={cn(
-                "relative px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest transition-colors duration-100",
+                "relative px-2.5 py-1 text-[10px] font-bold tracking-widest uppercase transition-colors duration-100",
                 "border border-border/50",
                 i > 0 && "-ml-px",
                 t === tf
-                  ? "bg-foreground text-background border-foreground z-10"
-                  : "text-muted-foreground/50 hover:text-foreground hover:z-10",
+                  ? "z-10 border-foreground bg-foreground text-background"
+                  : "text-muted-foreground/50 hover:z-10 hover:text-foreground"
               )}
             >
               {t}
@@ -237,36 +279,38 @@ export function MarketPriceChart({ market }: { market: Market }) {
         </div>
       </div>
 
-      {/* Chart container */}
       <div
         ref={containerRef}
-        className="relative h-[140px] cursor-crosshair select-none overflow-hidden"
+        className="relative h-[140px] cursor-crosshair overflow-hidden select-none"
         onPointerMove={onMove}
         onPointerEnter={onEnter}
         onPointerLeave={onLeave}
       >
-        {/* Dashed grid lines */}
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full pointer-events-none"
+          className="pointer-events-none absolute inset-0 h-full w-full"
           aria-hidden
         >
-          {[0.25, 0.5, 0.75].map(p => (
+          {[0.25, 0.5, 0.75].map((p) => (
             <line
               key={p}
-              x1={0} y1={svgY(p).toFixed(1)} x2={SVG_W} y2={svgY(p).toFixed(1)}
-              stroke="currentColor" strokeWidth="0.5" strokeDasharray="3 3"
+              x1={0}
+              y1={svgY(p).toFixed(1)}
+              x2={SVG_W}
+              y2={svgY(p).toFixed(1)}
+              stroke="currentColor"
+              strokeWidth="0.5"
+              strokeDasharray="3 3"
               className="text-border/40"
             />
           ))}
         </svg>
 
-        {/* Layer 1 — muted grey (always visible, shows through on the right when hovering) */}
         <svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 h-full w-full"
           aria-hidden
         >
           <defs>
@@ -275,15 +319,24 @@ export function MarketPriceChart({ market }: { market: Market }) {
               <stop offset="100%" stopColor="currentColor" stopOpacity="0" />
             </linearGradient>
           </defs>
-          <path d={area} fill="url(#chart-muted-fill)" className="text-foreground" />
-          <path d={line} stroke="currentColor" strokeWidth="1.5" fill="none" className="text-foreground/18" />
+          <path
+            d={area}
+            fill="url(#chart-muted-fill)"
+            className="text-foreground"
+          />
+          <path
+            d={line}
+            stroke="currentColor"
+            strokeWidth="1.5"
+            fill="none"
+            className="text-foreground/18"
+          />
         </svg>
 
-        {/* Layer 2 — colored emerald (clipped to left of cursor, spring-animated) */}
         <motion.svg
           viewBox={`0 0 ${SVG_W} ${SVG_H}`}
           preserveAspectRatio="none"
-          className="absolute inset-0 w-full h-full"
+          className="absolute inset-0 h-full w-full"
           style={{ clipPath }}
           aria-hidden
         >
@@ -297,91 +350,94 @@ export function MarketPriceChart({ market }: { market: Market }) {
           <path d={line} stroke="#10b981" strokeWidth="1.5" fill="none" />
         </motion.svg>
 
-        {/* Event markers */}
         {visibleEvents.map((ev, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 pointer-events-none"
+            className="pointer-events-none absolute top-0 bottom-0"
             style={{ left: `${ev.xPct}%` }}
           >
             <div className="absolute inset-y-0 left-0 w-px border-l border-dashed border-amber-400/30" />
             <Tooltip>
               <TooltipTrigger
-                className="pointer-events-auto absolute top-0 left-1/2 -translate-x-1/2 size-2.5 rotate-45 rounded-[2px] bg-amber-400/70 hover:bg-amber-400 transition-colors focus:outline-none"
+                className="pointer-events-auto absolute top-0 left-1/2 size-2.5 -translate-x-1/2 rotate-45 rounded-[2px] bg-amber-400/70 transition-colors hover:bg-amber-400 focus:outline-none"
                 aria-label={ev.label}
               />
               <TooltipPanel
                 side="top"
-                className="w-[240px] !bg-zinc-900 !text-zinc-100 border border-zinc-700 !text-pretty"
+                className="w-[240px] border border-zinc-700 !bg-zinc-900 !text-pretty !text-zinc-100"
               >
-                <p className="text-[11px] font-semibold leading-tight">{ev.label}</p>
-                <p className="mt-0.5 text-[10px] leading-snug opacity-70">{ev.description}</p>
+                <p className="text-[11px] leading-tight font-semibold">
+                  {ev.label}
+                </p>
+                <p className="mt-0.5 text-[10px] leading-snug opacity-70">
+                  {ev.description}
+                </p>
               </TooltipPanel>
             </Tooltip>
           </div>
         ))}
 
-        {/* Y-axis percentage labels */}
-        {[0.75, 0.5, 0.25].map(p => (
+        {[0.75, 0.5, 0.25].map((p) => (
           <span
             key={p}
-            className="absolute right-0 text-[9px] tabular-nums text-muted-foreground/30 pointer-events-none leading-none"
+            className="pointer-events-none absolute right-0 text-[9px] leading-none text-muted-foreground/30 tabular-nums"
             style={{ top: cssPct(p), transform: "translateY(-50%)" }}
           >
             {(p * 100).toFixed(0)}%
           </span>
         ))}
 
-        {/* Cursor crosshair line */}
         {hovering && (
           <div
-            className="absolute top-0 bottom-0 w-px bg-foreground/15 pointer-events-none"
+            className="pointer-events-none absolute top-0 bottom-0 w-px bg-foreground/15"
             style={{ left: `${xPct}%` }}
           />
         )}
 
-        {/* Cursor dot on the line */}
         {hovering && (
           <div
-            className="absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-emerald-400 border-2 border-background shadow-[0_0_0_3px_rgba(16,185,129,0.15)] pointer-events-none"
+            className="pointer-events-none absolute size-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-emerald-400 shadow-[0_0_0_3px_rgba(16,185,129,0.15)]"
             style={{ left: `${pt.t * 100}%`, top: cssPct(pt.price) }}
           />
         )}
 
-        {/* Live dot at the most recent price point (default state only) */}
         {!hovering && (
           <div
-            className="absolute right-0 -translate-y-1/2 pointer-events-none"
+            className="pointer-events-none absolute right-0 -translate-y-1/2"
             style={{ top: cssPct(last.price) }}
           >
             <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex size-2 rounded-full bg-emerald-400" />
             </span>
           </div>
         )}
       </div>
 
-      {/* Volume bars */}
-      <div className="h-7 flex items-end gap-[1px]">
+      <div className="flex h-7 items-end gap-[1px]">
         {data.map((p, i) => (
           <div
             key={i}
             className={cn(
-              "flex-1 min-w-0 transition-colors duration-75",
-              hovering && i <= hovIdx ? "bg-emerald-500/30" : "bg-foreground/[0.07]",
+              "min-w-0 flex-1 transition-colors duration-75",
+              hovering && i <= hovIdx
+                ? "bg-emerald-500/30"
+                : "bg-foreground/[0.07]"
             )}
             style={{ height: `${Math.max(5, p.volume * 100)}%` }}
           />
         ))}
       </div>
 
-      {/* X-axis time labels */}
-      <div className="flex justify-between text-[9px] tabular-nums text-muted-foreground/35">
-        {[0, 0.25, 0.5, 0.75, 1].map(t => {
+      <div className="flex justify-between text-[9px] text-muted-foreground/35 tabular-nums">
+        {[0, 0.25, 0.5, 0.75, 1].map((t) => {
           const idx = Math.round(t * (data.length - 1))
           const d = data[idx]
-          return d ? <span key={t}>{fmtLabel(d.date, tf)}</span> : <span key={t} />
+          return d ? (
+            <span key={t}>{fmtLabel(d.date, tf)}</span>
+          ) : (
+            <span key={t} />
+          )
         })}
       </div>
     </div>

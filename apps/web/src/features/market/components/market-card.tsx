@@ -33,6 +33,7 @@ import {
   formatDate,
   marketStatusLabel,
 } from "@/features/market/lib/utils"
+import { MarketImage } from "@/features/market/components/market-image"
 
 // ── Static config (hoisted — never recreated on render) ──────────────────────
 
@@ -137,7 +138,7 @@ function MultiSection({
             aria-pressed={isSelected}
             onClick={() => onSelect(isSelected ? null : outcome.id)}
             className={cn(
-              "flex items-center gap-3 px-2.5 py-2",
+              "flex flex-col gap-1.5 px-2.5 py-2",
               "transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
               "active:scale-[0.97]",
               isSelected
@@ -145,15 +146,15 @@ function MultiSection({
                 : "bg-muted [@media(hover:hover)_and_(pointer:fine)]:hover:bg-muted/60",
             )}
           >
-            <Progress value={outcome.price} className="flex-1">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 truncate text-xs font-medium text-foreground text-left">{outcome.label}</span>
+              <span className="shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">{outcome.price}%</span>
+            </div>
+            <Progress value={outcome.price} className="w-full">
               <ProgressTrack className="h-1 w-full overflow-hidden bg-white/8">
                 <ProgressIndicator className={cn("h-full", cat.bar)} />
               </ProgressTrack>
             </Progress>
-            <span className="shrink-0 text-xs font-medium text-foreground">{outcome.label}</span>
-            <span className="w-9 shrink-0 text-right text-xs font-semibold tabular-nums text-muted-foreground">
-              {outcome.price}%
-            </span>
           </button>
         )
       })}
@@ -348,7 +349,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
     <Card
       onClick={() => navigate({ to: "/markets/$marketId", params: { marketId: market.id } })}
       className={cn(
-        "cursor-pointer border-t-2",
+        "cursor-pointer border-t-2 pt-0 group/marketcard",
         cat.accent,
         "transition-[box-shadow,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
         "[@media(hover:hover)_and_(pointer:fine)]:hover:ring-foreground/20",
@@ -361,6 +362,15 @@ export function MarketCard({ market, index }: MarketCardProps) {
       )}
       style={{ animationDelay: `${Math.min(index * 55, 350)}ms` }}
     >
+      <MarketImage
+        market={market}
+        size="card"
+        className={cn(
+          "aspect-[16/7] w-full",
+          "[&>svg]:transition-transform [&>svg]:duration-300 [&>svg]:ease-[cubic-bezier(0.23,1,0.32,1)]",
+          "[@media(hover:hover)_and_(pointer:fine)]:group-hover/marketcard:[&>svg]:scale-[1.08]",
+        )}
+      />
       <CardHeader>
         <CardTitle>
           <span className={cn("px-1.5 py-0.5 text-[10px] font-bold tracking-widest uppercase", cat.badge)}>
@@ -423,9 +433,8 @@ export function MarketCard({ market, index }: MarketCardProps) {
           variant="outline"
           className={cn(
             "text-[10px] tracking-widest uppercase",
-            market.status === "open"      && "border-emerald-500/30 text-emerald-400",
+            (market.status === "open" || market.status === "pending") && "border-emerald-500/30 text-emerald-400",
             market.status === "resolved"  && "border-border text-muted-foreground",
-            market.status === "pending"   && "border-amber-500/30 text-amber-400",
             market.status === "cancelled" && "border-rose-500/30 text-rose-400",
           )}
         >
