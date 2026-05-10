@@ -146,6 +146,7 @@ async def run_chat(
             return ChatResult(
                 text="I could not generate a response.",
                 tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
             )
 
         candidate = response.candidates[0]
@@ -154,6 +155,7 @@ async def run_chat(
             return ChatResult(
                 text=response.text or "",
                 tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
             )
 
         contents.append(candidate.content)
@@ -183,6 +185,16 @@ async def run_chat(
             )
 
         contents.append(types.Content(role="user", parts=function_response_parts))
+
+        if ctx.intelligence_request is not None:
+            return ChatResult(
+                text=(
+                    "I need external data to answer that. Please confirm "
+                    "the payment to continue."
+                ),
+                tx_cards=ctx.tx_cards,
+                intelligence_request=ctx.intelligence_request,
+            )
 
     return ChatResult(
         text="I hit the maximum number of tool calls. Please try a simpler request.",
