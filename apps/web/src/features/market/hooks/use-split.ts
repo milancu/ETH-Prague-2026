@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { useAccount, usePublicClient, useWriteContract } from "wagmi"
-import { maxUint256 } from "viem"
+import { BaseError, ContractFunctionRevertedError, maxUint256 } from "viem"
 import { toast } from "sonner"
 import { useQueryClient } from "@tanstack/react-query"
 import {
@@ -62,8 +62,7 @@ export function useSplit() {
       const rejected = msg.toLowerCase().includes("rejected") || msg.toLowerCase().includes("denied")
       if (rejected) toast.dismiss(TOAST_ID)
       else {
-        const short = msg.split("\n")[0].slice(0, 120)
-        toast.error(`Mint failed: ${short}`, { id: TOAST_ID })
+        toast.error(`Mint failed: ${formatRevert(err)}`, { id: TOAST_ID })
       }
       throw err
     } finally {
@@ -72,4 +71,27 @@ export function useSplit() {
   }
 
   return { split, isPending }
+}
+
+/**
+ * Pulls the actual revert reason out of a viem error.
+ * Prefers the decoded custom-error name + args (when ABI carries the error),
+ * falls back to `shortMessage`, then to the first line of the message.
+ */
+function formatRevert(err: unknown): string {
+  if (err instanceof BaseError) {
+    const reverted = err.walk((e) => e instanceof ContractFunctionRevertedError)
+    if (reverted instanceof ContractFunctionRevertedError) {
+      const errName = reverted.data?.errorName
+      if (errName) {
+        const args = reverted.data?.args
+        const argStr = Array.isArray(args) && args.length > 0 ? `(${args.map(String).join(", ")})` : ""
+        return `${errName}${argStr}`
+      }
+      if (reverted.reason) return reverted.reason
+    }
+    return err.shortMessage
+  }
+  if (err instanceof Error) return err.message.split("\n")[0].slice(0, 160)
+  return String(err)
 }

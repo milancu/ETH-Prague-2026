@@ -9,7 +9,7 @@
  * `toFunctionSelector`, so they cannot drift away from the on-chain signatures.
  */
 
-import { toFunctionSelector, type AbiFunction } from "viem"
+import { toFunctionSelector, type Abi, type AbiFunction } from "viem"
 import {
   CONDITIONAL_TOKENS_ABI,
   CONDITIONAL_TOKENS_ADDRESS,
@@ -35,6 +35,7 @@ function selectorOf(abi: readonly unknown[], name: string): `0x${string}` {
 interface ContractEntry {
   label: string
   allow: ReadonlySet<string>
+  abi: Abi
 }
 
 function buildRegistry(): Map<string, ContractEntry> {
@@ -42,6 +43,7 @@ function buildRegistry(): Map<string, ContractEntry> {
   r.set(TABCOIN_ADDRESS.toLowerCase(), {
     label: "TABcoin",
     allow: new Set([selectorOf(ERC20_ABI, "approve")]),
+    abi: ERC20_ABI as unknown as Abi,
   })
   r.set(PREDICTION_MARKET_ADDRESS.toLowerCase(), {
     label: "PredictionMarketV2",
@@ -52,18 +54,22 @@ function buildRegistry(): Map<string, ContractEntry> {
       selectorOf(PREDICTION_MARKET_ABI, "splitAndWrap"),
       selectorOf(PREDICTION_MARKET_ABI, "claimWinnings"),
     ]),
+    abi: PREDICTION_MARKET_ABI as unknown as Abi,
   })
   r.set(CONDITIONAL_TOKENS_ADDRESS.toLowerCase(), {
     label: "ConditionalTokens",
     allow: new Set([selectorOf(CONDITIONAL_TOKENS_ABI, "setApprovalForAll")]),
+    abi: CONDITIONAL_TOKENS_ABI as unknown as Abi,
   })
   r.set(TABCLOB_ADDRESS.toLowerCase(), {
     label: "TabClob",
     allow: new Set([selectorOf(TABCLOB_ABI, "cancel"), selectorOf(TABCLOB_ABI, "fill")]),
+    abi: TABCLOB_ABI as unknown as Abi,
   })
   r.set(POSITION_WRAPPER_FACTORY_ADDRESS.toLowerCase(), {
     label: "PositionWrapperFactory",
     allow: new Set([selectorOf(FACTORY_ABI, "getOrCreateWrapper")]),
+    abi: FACTORY_ABI as unknown as Abi,
   })
   return r
 }
@@ -90,4 +96,9 @@ export function lookupFunction(address: string, data: string): FunctionLookup {
   const entry = REGISTRY.get(address.toLowerCase())
   if (!entry) return { allowed: false, selector }
   return { allowed: entry.allow.has(selector), selector }
+}
+
+/** ABI for a registered contract, or undefined if `address` isn't in the registry. */
+export function abiFor(address: string): Abi | undefined {
+  return REGISTRY.get(address.toLowerCase())?.abi
 }

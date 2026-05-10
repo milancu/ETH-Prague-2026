@@ -2,8 +2,44 @@ import { Button } from "@workspace/ui/components/button"
 import { ArrowUpRight, Gavel, Mic, MapPin } from "lucide-react"
 import logo from "./assets/logo.svg"
 import { HighlightText } from "@/components/animate-ui/primitives/texts/highlight.tsx"
+import { useKowalskiEasterEgg } from "./hooks/use-kowalski-easter-egg"
 
 const APP_URL = "https://app.kowalski-market.com"
+
+const SHOTS = [
+  {
+    n: "01",
+    label: "Markets index",
+    title: "Browse the long tail.",
+    body: "Trending Czech politics, weather, sport beyond the top leagues — everything legacy books skip.",
+    src: "/markets-overview.png",
+    span: "lg:col-span-7",
+  },
+  {
+    n: "02",
+    label: "Market detail",
+    title: "Live book. Honest chart.",
+    body: "Probability over time, last trades, and a side-by-side ticket. No paywalls, no fake odds.",
+    src: "/market-detail.png",
+    span: "lg:col-span-5",
+  },
+  {
+    n: "03",
+    label: "Kowalsky chat",
+    title: "Talk to the protocol.",
+    body: "Ask, analyze, prepare a trade — Kowalsky drafts a transaction card; you sign it. The agent never holds keys.",
+    src: "/kowalsky-chat.png",
+    span: "lg:col-span-5",
+  },
+  {
+    n: "04",
+    label: "Create market",
+    title: "Anyone proposes. Curators gate.",
+    body: "Question, resolution rules, expiry, outcome type. Post a 50 TAB anti-spam bond and ship it.",
+    src: "/create-market.png",
+    span: "lg:col-span-7",
+  },
+] as const
 
 const FEATURES = [
   {
@@ -30,13 +66,37 @@ const FEATURES = [
 ] as const
 
 export default function App() {
+  const eggTriggered = useKowalskiEasterEgg()
   return (
     <div className="min-h-dvh bg-background text-foreground antialiased selection:bg-foreground selection:text-background">
       <Topbar />
       <Hero />
       <Features />
+      <Showcase />
       <ClosingCta />
       <Footer />
+      <KowalskiFlash active={eggTriggered} />
+    </div>
+  )
+}
+
+function KowalskiFlash({ active }: { active: boolean }) {
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none fixed inset-0 z-50 flex items-center justify-center transition-opacity duration-300 ${
+        active ? "opacity-100" : "opacity-0"
+      }`}
+    >
+      <div className="absolute inset-0 bg-foreground/5 backdrop-blur-[1px]" />
+      <p
+        className={`relative font-['Instrument_Serif',ui-serif,serif] text-[clamp(3rem,12vw,11rem)] leading-none tracking-[-0.02em] transition-transform duration-500 ${
+          active ? "scale-100" : "scale-95"
+        }`}
+      >
+        Kowalski,{" "}
+        <em className="text-muted-foreground/70">analysis.</em>
+      </p>
     </div>
   )
 }
@@ -214,6 +274,73 @@ function FeatureRow({ feature }: { feature: (typeof FEATURES)[number] }) {
   )
 }
 
+function Showcase() {
+  return (
+    <section
+      id="showcase"
+      aria-labelledby="showcase-heading"
+      className="border-b border-border"
+    >
+      <div className="mx-auto max-w-7xl px-4 pt-20 pb-6 sm:px-6 sm:pt-28">
+        <p className="font-mono text-[11px] uppercase tracking-[0.24em] text-muted-foreground">
+          Plate · Shots from the floor
+        </p>
+        <h2
+          id="showcase-heading"
+          className="mt-4 max-w-3xl text-balance font-['Instrument_Serif',ui-serif,serif] text-4xl leading-[1.02] tracking-[-0.01em] sm:text-6xl"
+        >
+          Four screens, <em className="text-muted-foreground/70">one protocol.</em>
+        </h2>
+      </div>
+
+      <div className="mx-auto max-w-7xl px-4 pb-20 sm:px-6 sm:pb-28">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+          {SHOTS.map((s) => (
+            <ShotCard key={s.n} shot={s} />
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function ShotCard({ shot }: { shot: (typeof SHOTS)[number] }) {
+  return (
+    <figure
+      className={`group flex flex-col gap-4 ${shot.span ?? "lg:col-span-6"}`}
+    >
+      <div className="relative overflow-hidden border border-border bg-muted/30">
+        <img
+          src={shot.src}
+          alt={shot.title}
+          loading="lazy"
+          decoding="async"
+          className="block h-auto w-full transition-transform duration-700 ease-out group-hover:scale-[1.015]"
+        />
+      </div>
+      <figcaption className="flex items-baseline gap-4">
+        <span
+          aria-hidden
+          className="font-['Instrument_Serif',ui-serif,serif] text-3xl leading-none text-muted-foreground/40"
+        >
+          {shot.n}
+        </span>
+        <div className="flex-1">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            {shot.label}
+          </p>
+          <p className="mt-1 text-balance font-['Instrument_Serif',ui-serif,serif] text-2xl leading-[1.1] tracking-[-0.01em]">
+            {shot.title}
+          </p>
+          <p className="mt-2 text-pretty text-[14px] leading-relaxed text-muted-foreground">
+            {shot.body}
+          </p>
+        </div>
+      </figcaption>
+    </figure>
+  )
+}
+
 function ClosingCta() {
   return (
     <section className="border-b border-border">
@@ -242,7 +369,7 @@ function Footer() {
       <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <span>© 2026 Kowalski Market · Penguins × Claude</span>
         <span className="hidden sm:inline">
-          Press <kbd className="px-1 text-foreground">D</kbd> to flip the lights
+          Type <kbd className="px-1 text-foreground">kowalski</kbd> for a second opinion
         </span>
         <a
           href="https://api.kowalski-market.com/v1/integrations"

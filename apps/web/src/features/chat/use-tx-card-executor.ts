@@ -9,8 +9,13 @@ import {
 } from "wagmi"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "sonner"
-import type { Hex } from "viem"
-import { lookupAddress, lookupFunction } from "./address-book"
+import {
+  BaseError,
+  ContractFunctionRevertedError,
+  decodeErrorResult,
+  type Hex,
+} from "viem"
+import { abiFor, lookupAddress, lookupFunction } from "./address-book"
 import { runPostActions } from "./post-actions"
 import type { TxCard, TxStep } from "./schema"
 
@@ -196,7 +201,7 @@ export function useTxCardExecutor(card: TxCard): UseTxCardExecutorResult {
           value: BigInt(step.value),
         })
       } catch (err) {
-        const reason = parseRevert(err)
+        const reason = parseRevert(err, step.to)
         setState((s) => ({
           ...updateCheck(s, "simulate", reason),
           ...setStepStatus(s, i, { status: "failed", error: reason }),
@@ -226,7 +231,7 @@ export function useTxCardExecutor(card: TxCard): UseTxCardExecutorResult {
           mainReceipt = receipt
         }
       } catch (err) {
-        const reason = parseRevert(err)
+        const reason = parseRevert(err, step.to)
         setState((s) => ({
           ...setStepStatus(s, i, { status: "failed", error: reason }),
           phase: "failed",
@@ -292,12 +297,70 @@ function setStepStatus(s: ExecState, index: number, patch: Partial<StepState>): 
   }
 }
 
-function parseRevert(err: unknown): string {
-  if (!(err instanceof Error)) return "Unknown error"
-  const msg = err.message
-  // viem ContractFunctionExecutionError typically has the reason on first line.
-  const first = msg.split("\n")[0].trim()
-  return first.length > 140 ? first.slice(0, 140) + "…" : first
+/**
+ * Pulls the actual revert reason out of a viem error.
+ *
+ * `publicClient.call()` is raw (no ABI), so when the node returns custom-error
+ * data viem can't name it on its own. If we know which contract was called we
+ * decode `error.data` against that contract's ABI ourselves; otherwise we fall
+ * back to viem's `shortMessage` and finally to the first line of `message`.
+ */
+function parseRevert(err: unknown, address?: string): string {
+  if (err instanceof BaseError) {
+    // Direct hit: viem already decoded the custom error (happens for
+    // simulateContract / writeContract paths that carry an ABI).
+    const reverted = err.walk((e) => e instanceof ContractFunctionRevertedError)
+    if (reverted instanceof ContractFunctionRevertedError) {
+      const named = formatErrorName(reverted.data?.errorName, reverted.data?.args)
+      if (named) return named
+      if (reverted.reason) return reverted.reason
+    }
+
+    // Raw revert data from `publicClient.call` lives on the cause chain. Try to
+    // find a hex blob and decode it against the target contract's ABI.
+    const abi = address ? abiFor(address) : undefined
+    if (abi) {
+      const data = extractRevertData(err)
+      if (data && data !== "0x") {
+        try {
+          const decoded = decodeErrorResult({ abi, data })
+          const named = formatErrorName(decoded.errorName, decoded.args as readonly unknown[] | undefined)
+          if (named) return named
+        } catch {
+          /* not one of ours — fall through */
+        }
+      }
+    }
+
+    return err.shortMessage
+  }
+  if (err instanceof Error) {
+    const first = err.message.split("\n")[0].trim()
+    return first.length > 160 ? first.slice(0, 160) + "…" : first
+  }
+  return "Unknown error"
+}
+
+function formatErrorName(name: string | undefined, args: readonly unknown[] | undefined): string | null {
+  if (!name) return null
+  const argStr = Array.isArray(args) && args.length > 0 ? `(${args.map(String).join(", ")})` : ""
+  return `${name}${argStr}`
+}
+
+function extractRevertData(err: BaseError): Hex | undefined {
+  let cur: unknown = err
+  while (cur) {
+    if (typeof cur === "object" && cur !== null) {
+      const c = cur as { data?: unknown; cause?: unknown }
+      if (typeof c.data === "string" && c.data.startsWith("0x")) return c.data as Hex
+      if (typeof c.data === "object" && c.data !== null && "data" in c.data) {
+        const inner = (c.data as { data?: unknown }).data
+        if (typeof inner === "string" && inner.startsWith("0x")) return inner as Hex
+      }
+      cur = c.cause
+    } else break
+  }
+  return undefined
 }
 
 // Receipt hook — re-exported in case a component wants to render confirmations
