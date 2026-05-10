@@ -1,5 +1,12 @@
-import { useCallback, useMemo, useRef, useState } from "react"
-import { motion, useMotionTemplate, useSpring } from "motion/react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  animate,
+  motion,
+  useMotionTemplate,
+  useMotionValue,
+  useMotionValueEvent,
+  useSpring,
+} from "motion/react"
 import { cn } from "@workspace/ui/lib/utils"
 import {
   Tooltip,
@@ -203,6 +210,36 @@ export function MarketPriceChart({ market }: { market: Market }) {
   const delta = last.price - first.price
   const isUp = delta >= 0
 
+  // ── Live price tween + tick flash (no scrubbing) ──────────────────────────────
+  const livePriceMV = useMotionValue(last.price * 100)
+  const [livePriceText, setLivePriceText] = useState(
+    (last.price * 100).toFixed(1)
+  )
+  useMotionValueEvent(livePriceMV, "change", (v) => {
+    setLivePriceText(v.toFixed(1))
+  })
+  useEffect(() => {
+    const controls = animate(livePriceMV, last.price * 100, {
+      type: "spring",
+      stiffness: 140,
+      damping: 22,
+      mass: 0.5,
+    })
+    return () => controls.stop()
+  }, [last.price, livePriceMV])
+
+  const prevLivePriceRef = useRef(last.price)
+  const [flashDir, setFlashDir] = useState<"up" | "down" | null>(null)
+  useEffect(() => {
+    const prev = prevLivePriceRef.current
+    if (Math.abs(last.price - prev) > 0.0001) {
+      setFlashDir(last.price > prev ? "up" : "down")
+      prevLivePriceRef.current = last.price
+      const t = setTimeout(() => setFlashDir(null), 700)
+      return () => clearTimeout(t)
+    }
+  }, [last.price])
+
   const onMove = useCallback(
     (e: React.PointerEvent) => {
       if (!containerRef.current) return
@@ -236,8 +273,21 @@ export function MarketPriceChart({ market }: { market: Market }) {
       <div className="flex items-end justify-between gap-4">
         <div className="flex flex-col gap-0.5">
           <div className="flex items-baseline gap-2.5">
-            <span className="text-2xl font-semibold tracking-tight text-foreground tabular-nums">
-              {(pt.price * 100).toFixed(1)}%
+            <span className="relative inline-flex items-baseline">
+              {/* Tick flash backdrop — emerald on up, rose on down, fades 700ms */}
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute inset-x-[-0.35rem] inset-y-[0.15em] -z-10 rounded-[3px]",
+                  "transition-opacity duration-700 ease-out",
+                  flashDir === "up" && "bg-emerald-500/25 opacity-100",
+                  flashDir === "down" && "bg-rose-500/25 opacity-100",
+                  flashDir === null && "opacity-0",
+                )}
+              />
+              <span className="font-serif text-4xl leading-none font-normal tracking-[-0.02em] text-foreground tabular-nums sm:text-[2.75rem]">
+                {hovering ? (pt.price * 100).toFixed(1) : livePriceText}%
+              </span>
             </span>
             <span
               className={cn(

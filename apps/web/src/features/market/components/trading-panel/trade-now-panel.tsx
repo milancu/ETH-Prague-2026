@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { parseEther } from "viem"
 import { Info } from "lucide-react"
 import { cn } from "@workspace/ui/lib/utils"
@@ -126,8 +126,39 @@ export function TradeNowPanel({ market, side, slotCtx, tabBalanceNum }: Props) {
       return isBuy ? "No sell offers in book" : "No buy offers in book"
     if (cappedTokens <= 0) return "Enter amount"
     if (insufficientTab) return "Insufficient TAB balance"
-    return `${isBuy ? "Buy" : "Sell"} ${fmtAmt(cappedTokens)} ${label} · Pay ${fmtAmt(displayTotal, 2)} TAB`
+    return `${isBuy ? "Buy" : "Sell"} ${fmtAmt(cappedTokens)} ${label} · ${isBuy ? "Pay" : "Receive"} ${fmtAmt(displayTotal, 2)} TAB`
   }
+
+  // ── Hold-to-confirm for large trades (Emil clip-path pattern) ────────────────
+  const HOLD_THRESHOLD_TAB = 100
+  const HOLD_DURATION_MS = 1400
+  const requiresHold = displayTotal >= HOLD_THRESHOLD_TAB && !isDisabled
+
+  const [holding, setHolding] = useState(false)
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  function clearHold() {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current)
+      holdTimerRef.current = null
+    }
+    setHolding(false)
+  }
+
+  function onHoldStart(e: React.PointerEvent<HTMLButtonElement>) {
+    if (!requiresHold || isDisabled) return
+    e.preventDefault()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    setHolding(true)
+    holdTimerRef.current = setTimeout(() => {
+      holdTimerRef.current = null
+      setHolding(false)
+      handleTrade()
+    }, HOLD_DURATION_MS)
+  }
+
+  // Cleanup on unmount.
+  useEffect(() => () => clearHold(), [])
 
   // ── Render ────────────────────────────────────────────────────────────────────
   return (
@@ -254,10 +285,14 @@ export function TradeNowPanel({ market, side, slotCtx, tabBalanceNum }: Props) {
           />
 
           <Button
-            onClick={handleTrade}
+            onClick={requiresHold ? undefined : handleTrade}
+            onPointerDown={onHoldStart}
+            onPointerUp={clearHold}
+            onPointerLeave={clearHold}
+            onPointerCancel={clearHold}
             disabled={isDisabled}
             className={cn(
-              "mt-1 h-12 w-full text-sm font-bold uppercase tracking-wider",
+              "relative mt-1 h-12 w-full overflow-hidden text-sm font-bold uppercase tracking-wider",
               "transition-[transform,background-color,box-shadow] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]",
               "active:scale-[0.98]",
               isBuy
@@ -265,7 +300,26 @@ export function TradeNowPanel({ market, side, slotCtx, tabBalanceNum }: Props) {
                 : "bg-orange-500/90 text-white shadow-[0_8px_24px_-12px] shadow-orange-500/60 hover:bg-orange-500 disabled:bg-orange-500/30",
             )}
           >
-            {actionLabel()}
+            {/* Hold progress fill — clip-path drives the slow reveal.
+                Press: 1.4s linear (deliberate). Release: 200ms ease-out (snappy). */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 z-0 bg-white/30"
+              style={{
+                clipPath: holding ? "inset(0 0 0 0)" : "inset(0 100% 0 0)",
+                transition: holding
+                  ? `clip-path ${HOLD_DURATION_MS}ms linear`
+                  : "clip-path 200ms cubic-bezier(0.23, 1, 0.32, 1)",
+              }}
+            />
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              <span>{actionLabel()}</span>
+              {requiresHold && (
+                <span className="rounded-sm bg-black/25 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-widest text-white/85">
+                  {holding ? "Keep holding…" : "Hold"}
+                </span>
+              )}
+            </span>
           </Button>
         </>
       )}

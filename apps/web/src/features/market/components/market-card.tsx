@@ -15,7 +15,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
-import { Calendar } from "lucide-react"
+import { Calendar, MessageSquare, TrendingDown, TrendingUp, Users } from "lucide-react"
+import { formatRelativeTime, formatTabShort, getMarketStats } from "@/features/market/lib/mock-stats"
 import {
   Progress,
   ProgressIndicator,
@@ -66,6 +67,74 @@ const BINARY_SIDES = [
     text: "text-rose-400",
   },
 ] as const
+
+// ── Closing-time hint (relative + urgency colouring) ────────────────────────
+
+function ClosingHint({ date }: { date: Date }) {
+  const ms = date.getTime() - Date.now()
+  const hours = ms / 3_600_000
+  const urgent = hours > 0 && hours < 24
+  const past = hours <= 0
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-1 text-[10px]",
+        past
+          ? "text-muted-foreground/40"
+          : urgent
+            ? "text-amber-400"
+            : "text-muted-foreground",
+      )}
+      title={formatDate(date)}
+    >
+      <Calendar aria-hidden className="size-3 shrink-0" />
+      <time dateTime={date.toISOString()}>
+        {past ? "Closed" : `Closes ${formatRelativeTime(date)}`}
+      </time>
+    </div>
+  )
+}
+
+// ── Activity stats row (under title) ─────────────────────────────────────────
+
+function MarketCardStats({ market }: { market: Market }) {
+  const s = getMarketStats(market)
+  const isUp = s.delta24h >= 0
+  const TrendIcon = isUp ? TrendingUp : TrendingDown
+  return (
+    <div className="flex items-center justify-between gap-3 text-[10px] tabular-nums text-muted-foreground/80">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span className="flex items-center gap-1">
+          <span className="font-semibold text-foreground/90">{formatTabShort(s.volumeTab)}</span>
+          <span className="uppercase tracking-widest text-muted-foreground/50">vol</span>
+        </span>
+        <span className="text-muted-foreground/30">·</span>
+        <span className="flex items-center gap-1">
+          <Users aria-hidden className="size-3 text-muted-foreground/50" />
+          <span>{s.traders.toLocaleString("en-US")}</span>
+        </span>
+        {s.comments > 0 && (
+          <>
+            <span className="text-muted-foreground/30">·</span>
+            <span className="flex items-center gap-1">
+              <MessageSquare aria-hidden className="size-3 text-muted-foreground/50" />
+              <span>{s.comments}</span>
+            </span>
+          </>
+        )}
+      </div>
+      <span
+        className={cn(
+          "flex shrink-0 items-center gap-0.5 font-semibold",
+          isUp ? "text-emerald-400" : "text-rose-400",
+        )}
+      >
+        <TrendIcon aria-hidden className="size-3" />
+        {isUp ? "+" : ""}{s.delta24h.toFixed(1)}%
+      </span>
+    </div>
+  )
+}
 
 // ── Binary outcome selector ──────────────────────────────────────────────────
 
@@ -296,9 +365,10 @@ function BetForm({
 interface MarketCardProps {
   market: Market
   index: number
+  className?: string
 }
 
-export function MarketCard({ market, index }: MarketCardProps) {
+export function MarketCard({ market, index, className }: MarketCardProps) {
   const navigate = useNavigate()
   const [selectedOutcome, setSelectedOutcome] = useState<string | null>(null)
   const [betAmount, setBetAmount] = useState("")
@@ -359,6 +429,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
         "motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-[97%]",
         "motion-safe:slide-in-from-bottom-3 motion-safe:duration-250 motion-safe:fill-mode-both",
         "motion-safe:[animation-timing-function:cubic-bezier(0.23,1,0.32,1)]",
+        className,
       )}
       style={{ animationDelay: `${Math.min(index * 55, 350)}ms` }}
     >
@@ -378,12 +449,7 @@ export function MarketCard({ market, index }: MarketCardProps) {
           </span>
         </CardTitle>
         <CardAction>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Calendar aria-hidden="true" className="size-3 shrink-0" />
-            <time dateTime={market.closingDate.toISOString()}>
-              {formatDate(market.closingDate)}
-            </time>
-          </div>
+          <ClosingHint date={market.closingDate} />
         </CardAction>
       </CardHeader>
 
@@ -391,6 +457,9 @@ export function MarketCard({ market, index }: MarketCardProps) {
         <p className="text-sm font-medium leading-snug text-foreground text-pretty">
           {market.title}
         </p>
+
+        {/* Activity row — volume / traders / comments / 24h delta */}
+        <MarketCardStats market={market} />
 
         {/* stopPropagation so clicks on interactive elements don't bubble to the card */}
         <div onClick={(e) => e.stopPropagation()} className="flex flex-col gap-4 pb-2">

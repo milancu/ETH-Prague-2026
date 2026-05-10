@@ -49,6 +49,7 @@
     --radius-3xl: calc(var(--radius) * 2.2);
     --radius-4xl: calc(var(--radius) * 2.6);
     --font-sans: 'Geist Variable', sans-serif;
+    --font-serif: 'Instrument Serif', ui-serif, Georgia, serif;
 }
 
 :root {

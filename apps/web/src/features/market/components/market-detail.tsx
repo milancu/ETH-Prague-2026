@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import { ArrowLeft, Calendar, ChevronDown, Copy } from "lucide-react"
 import { motion } from "motion/react"
@@ -16,6 +16,8 @@ import { CreateMarketDialog } from "@/features/market/components/create-market-d
 import { MarketImage } from "@/features/market/components/market-image"
 import { MarketPriceChart } from "@/features/market/components/market-price-chart"
 import { SimilarMarkets } from "@/features/market/components/similar-markets"
+import { LiveTradesTicker } from "@/features/market/components/live-trades-ticker"
+import { StickyMarketHeader } from "@/features/market/components/sticky-market-header"
 
 // ── Static config ─────────────────────────────────────────────────────────────
 
@@ -134,6 +136,25 @@ export function MarketDetail({ id }: { id: string }) {
   const { data: market, isLoading, isError } = useMarket(id)
   const livePrices = useMarketPrices(market)
 
+  // Sticky compact header — shown once the hero has scrolled out of view.
+  // The actual scroller is Radix ScrollArea's viewport, not window — find it.
+  const heroSentinelRef = useRef<HTMLDivElement>(null)
+  const [stickyVisible, setStickyVisible] = useState(false)
+  useEffect(() => {
+    const el = heroSentinelRef.current
+    if (!el) return
+    const root =
+      (el.closest(
+        "[data-radix-scroll-area-viewport]",
+      ) as HTMLElement | null) ?? null
+    const obs = new IntersectionObserver(
+      ([entry]) => setStickyVisible(!!entry && !entry.isIntersecting),
+      { root, rootMargin: "0px", threshold: 0 },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [market?.id])
+
   const liveMarket = useMemo((): Market | undefined => {
     if (!market || Object.keys(livePrices).length === 0) return market
     if (market.outcomeType === "binary") {
@@ -169,7 +190,12 @@ export function MarketDetail({ id }: { id: string }) {
   const status = marketStatusLabel(market.status)
 
   return (
-    <div className="flex flex-col gap-4">
+    <div>
+      {/* Sticky compact header sits outside the gap-4 flex so it costs zero
+          vertical space when collapsed (otherwise the parent's gap shows). */}
+      <StickyMarketHeader market={liveMarket ?? market} visible={stickyVisible} />
+
+      <div className="flex flex-col gap-4">
       {/* Header — breadcrumb left, Add market right. Both layoutIds match the list page. */}
       <div className="flex items-center justify-between gap-4">
         <Link
@@ -235,6 +261,10 @@ export function MarketDetail({ id }: { id: string }) {
         </div>
       </div>
 
+      {/* Sentinel — when this scrolls above the ScrollArea top, the sticky
+          compact header at the top of the page slides in. */}
+      <div ref={heroSentinelRef} aria-hidden className="h-px w-full -mt-px" />
+
       {/* Main grid */}
       <div className="grid gap-8 lg:grid-cols-[1fr_440px]">
 
@@ -244,6 +274,9 @@ export function MarketDetail({ id }: { id: string }) {
           <section>
             <MarketPriceChart market={liveMarket ?? market} />
           </section>
+
+          {/* Live trade ticker */}
+          <LiveTradesTicker market={liveMarket ?? market} />
 
           {market.description && (
             <section className="flex flex-col gap-2">
@@ -283,12 +316,14 @@ export function MarketDetail({ id }: { id: string }) {
           </section>
         </div>
 
-        {/* Right — trading panel + suggestions */}
-        <div className="flex flex-col gap-6 lg:sticky lg:top-4 lg:self-start">
+        {/* Right — trading panel + suggestions. top-[64px] keeps it clear of the
+            sticky compact header (52px) when both are pinned. */}
+        <div className="flex flex-col gap-6 lg:sticky lg:top-[64px] lg:self-start">
           <TradingPanel market={liveMarket ?? market} />
           <ResolutionBar market={liveMarket ?? market} />
           <SimilarMarkets market={market} />
         </div>
+      </div>
       </div>
     </div>
   )
