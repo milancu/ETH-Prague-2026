@@ -155,7 +155,7 @@ class ENSBridge:
             logger.info("MarketCreated: marketId=%d", market_id)
 
             market = self._pmv2.functions.getMarket(market_id).call()
-            slug = slugify(market[5])  # market.name is at index 5 in the struct
+            slug = slugify(market[6])  # market.name is at index 6 in the struct
             if not slug:
                 slug = f"market-{market_id}"
 
