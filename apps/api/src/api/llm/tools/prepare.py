@@ -428,6 +428,29 @@ def prepare_merge(
 
 
 # ---------------------------------------------------------------------------
+# prepare_resolve_market
+# ---------------------------------------------------------------------------
+
+
+def prepare_resolve_market(
+    client: Web3Client,
+    market_id: int,
+    payouts: list[int],
+    chain_id: int,
+) -> dict[str, Any]:
+    """Build resolveMarket calldata. Callable by oracle or creator."""
+    resolve_data: str = client.pmv2.encode_abi(
+        "resolveMarket", args=[market_id, payouts]
+    )
+    return _tx_card(
+        to=client.pmv2.address,
+        data=resolve_data,
+        chain_id=chain_id,
+        summary=f"Resolve market #{market_id} with payouts {payouts}",
+    )
+
+
+# ---------------------------------------------------------------------------
 # prepare_cancel_order
 # ---------------------------------------------------------------------------
 

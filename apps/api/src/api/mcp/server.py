@@ -34,6 +34,7 @@ from api.lib.apify_x402 import ApifyClientError
 from api.lib.web3_client import get_client
 from api.llm.tools import apify as apify_tools
 from api.llm.tools import chain as chain_tools
+from api.llm.tools import dice as dice_tools
 from api.llm.tools import prepare as prepare_tools
 from api.llm.tools.chain import get_wrapper_address, index_set_for_slot
 from api.llm.tools.orderbook import build_orderbook
@@ -535,6 +536,111 @@ async def prepare_cancel_order(
             prepare_tools.prepare_cancel_order,
             client,
             order,
+            effective_chain,
+        )
+
+
+# ---------------------------------------------------------------------------
+# Resolve market
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    description=(
+        "Build resolveMarket calldata for PredictionMarketV2. "
+        "Callable by the market oracle or creator. "
+        "payouts: list of ints, one per outcome slot (e.g. [0,0,0,1,0,0] for slot 3). "
+        "Returns a TxCard — the user signs and broadcasts."
+    )
+)
+async def prepare_resolve_market(
+    market_id: int,
+    payouts: list[int],
+    chain_id: int | None = None,
+) -> dict[str, Any]:
+    effective_chain = chain_id if chain_id is not None else _DEFAULT_CHAIN_ID
+    client = get_client(effective_chain)
+    return await asyncio.to_thread(
+        prepare_tools.prepare_resolve_market,
+        client,
+        market_id,
+        payouts,
+        effective_chain,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Dice market tools (SpaceComputer cTRNG)
+# ---------------------------------------------------------------------------
+
+
+@mcp.tool(
+    description=(
+        "Create a cosmic dice market powered by SpaceComputer cTRNG. "
+        "Commits to a future beacon block, creates a 6-outcome market. "
+        "delay_minutes controls how far in the future the beacon block is "
+        "(default 5). Returns a TxCard + commitment ID for later reveal."
+    )
+)
+async def prepare_create_dice_market(
+    name: str,
+    user_address: str,
+    description: str = "",
+    delay_minutes: float = 5.0,
+    chain_id: int | None = None,
+) -> dict[str, Any]:
+    _check_address(user_address, field="user_address")
+    effective_chain = chain_id if chain_id is not None else _DEFAULT_CHAIN_ID
+    client = get_client(effective_chain)
+    async with SessionLocal() as session:
+        return await dice_tools.prepare_create_dice_market(
+            session,
+            client,
+            name,
+            description,
+            delay_minutes,
+            user_address,
+            effective_chain,
+        )
+
+
+@mcp.tool(
+    description=(
+        "Link an on-chain market_id to a dice commitment after the user "
+        "signs the createMarket transaction. Must be called before reveal."
+    )
+)
+async def link_dice_market(
+    commitment_id: int,
+    market_id: int,
+) -> dict[str, Any]:
+    async with SessionLocal() as session:
+        return await dice_tools.link_dice_market(
+            session,
+            commitment_id,
+            market_id,
+        )
+
+
+@mcp.tool(
+    description=(
+        "Reveal a cosmic dice result. Fetches the committed SpaceComputer "
+        "beacon block, derives a deterministic die roll (1-6), and builds "
+        "resolveMarket calldata. Returns not_ready with eta_seconds if "
+        "the beacon block is not yet available."
+    )
+)
+async def reveal_dice_market(
+    commitment_id: int,
+    chain_id: int | None = None,
+) -> dict[str, Any]:
+    effective_chain = chain_id if chain_id is not None else _DEFAULT_CHAIN_ID
+    client = get_client(effective_chain)
+    async with SessionLocal() as session:
+        return await dice_tools.reveal_dice_market(
+            session,
+            client,
+            commitment_id,
             effective_chain,
         )
 
