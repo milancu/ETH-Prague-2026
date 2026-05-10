@@ -63,14 +63,6 @@ app = FastAPI(
 _cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173")
 _ALLOWED_ORIGINS = [o.strip() for o in _cors_origins.split(",")]
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=_ALLOWED_ORIGINS,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -119,6 +111,21 @@ async def x402_mcp_paywall(
 
     _call_next: Callable[[Request], Awaitable[Response]] = call_next  # type: ignore[assignment]
     return await mcp_x402_middleware(request, _call_next)
+
+
+# CORS is registered LAST so it ends up OUTERMOST in the Starlette stack —
+# otherwise the 402 returned by the x402 paywall middleware never gets
+# Access-Control-Allow-Origin and the browser blocks the response body
+# before x402-fetch can read it. Expose the x402 response headers so the
+# JS client can decode the settlement receipt after a successful payment.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_ALLOWED_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["X-PAYMENT-RESPONSE", "payment-required"],
+)
 
 
 app.include_router(markets.router)
