@@ -105,3 +105,16 @@ class Order(SQLModel, table=True):
     verifying_contract: str = Field(max_length=42)
     signature: str = Field(max_length=132)
     note: str | None = Field(default=None, max_length=512)
+
+
+class IndexerCheckpoint(SQLModel, table=True):
+    """Last-processed block per indexer name. Read on startup, written after
+    each successful poll. Without this the ENS bridge restarts from the
+    current head and misses every event from before its last restart.
+    """
+
+    __tablename__ = "indexer_checkpoints"
+
+    name: str = Field(primary_key=True, max_length=64)
+    block_number: int
+    updated_at: datetime = Field(default_factory=_utc_now)

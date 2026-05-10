@@ -31,9 +31,11 @@ import os
 from pathlib import Path
 from typing import Any
 
-from eth_utils import keccak
+from sqlalchemy import select
 from web3 import Web3
 
+from api.db.models import IndexerCheckpoint
+from api.db.session import SessionLocal
 from api.lib.ens import slugify
 
 logger = logging.getLogger(__name__)
@@ -43,6 +45,14 @@ _ENABLED = os.getenv("ENS_BRIDGE_ENABLED", "") == "1"
 
 _BASE_SEPOLIA_CHAIN = 84532
 _ETH_SEPOLIA_CHAIN = 11155111
+
+# Public RPCs cap getLogs at ~10k blocks. 5k stays well under.
+_BACKFILL_CHUNK_BLOCKS = int(os.getenv("ENS_BRIDGE_CHUNK_BLOCKS", "5000"))
+
+# When no checkpoint exists, start here. PMv2 deploy block on Base Sepolia.
+_DEFAULT_START_BLOCK = int(os.getenv("BRIDGE_START_BLOCK_84532", "41289065"))
+
+_CHECKPOINT_NAME = "ens_bridge_84532"
 
 _BUNDLED_ABI_DIR = Path(__file__).parent.parent / "abi"
 _ARTIFACTS_ROOT = (
@@ -122,8 +132,11 @@ class ENSBridge:
         self._last_block = 0
 
     async def run(self) -> None:
-        logger.info("ENS bridge started, polling every %ds", _POLL_SECONDS)
-        self._last_block = self._base_w3.eth.block_number
+        self._last_block = await self._load_checkpoint()
+        logger.info(
+            "ENS bridge started at block %d, polling every %ds",
+            self._last_block, _POLL_SECONDS,
+        )
 
         while True:
             try:
@@ -137,14 +150,51 @@ class ENSBridge:
         if current <= self._last_block:
             return
 
+        # Walk in fixed-size chunks so a public-RPC getLogs cap (~10k blocks)
+        # never bites us during initial backfill, and so the checkpoint
+        # advances incrementally — a crash mid-backfill resumes near the
+        # last completed chunk instead of restarting from scratch.
         from_block = self._last_block + 1
-        to_block = current
+        while from_block <= current:
+            to_block = min(from_block + _BACKFILL_CHUNK_BLOCKS - 1, current)
+            await self._handle_market_created(from_block, to_block)
+            await self._handle_market_resolved(from_block, to_block)
+            await self._handle_market_canceled(from_block, to_block)
+            self._last_block = to_block
+            await self._save_checkpoint(to_block)
+            from_block = to_block + 1
 
-        await self._handle_market_created(from_block, to_block)
-        await self._handle_market_resolved(from_block, to_block)
-        await self._handle_market_canceled(from_block, to_block)
+    async def _load_checkpoint(self) -> int:
+        async with SessionLocal() as session:
+            row = (
+                await session.execute(
+                    select(IndexerCheckpoint).where(
+                        IndexerCheckpoint.name == _CHECKPOINT_NAME
+                    )
+                )
+            ).scalar_one_or_none()
+        if row is None:
+            return _DEFAULT_START_BLOCK - 1  # so from_block == _DEFAULT_START_BLOCK
+        return row.block_number
 
-        self._last_block = to_block
+    async def _save_checkpoint(self, block_number: int) -> None:
+        async with SessionLocal() as session:
+            row = (
+                await session.execute(
+                    select(IndexerCheckpoint).where(
+                        IndexerCheckpoint.name == _CHECKPOINT_NAME
+                    )
+                )
+            ).scalar_one_or_none()
+            if row is None:
+                session.add(
+                    IndexerCheckpoint(
+                        name=_CHECKPOINT_NAME, block_number=block_number
+                    )
+                )
+            else:
+                row.block_number = block_number
+            await session.commit()
 
     async def _handle_market_created(self, from_block: int, to_block: int) -> None:
         events = self._pmv2.events.MarketCreated().get_logs(
@@ -159,14 +209,24 @@ class ENSBridge:
             if not slug:
                 slug = f"market-{market_id}"
 
-            try:
-                self._send_tx(
-                    self._registrar.functions.registerMarket(slug, market_id)
+            existing_node = self._registrar.functions.marketNodes(market_id).call()
+            already_registered = existing_node != b"\x00" * 32
+            if already_registered:
+                logger.info(
+                    "Subname already registered for market %d, refreshing records only",
+                    market_id,
                 )
-                logger.info("Registered subname: %s.kowalski.eth", slug)
-            except Exception:
-                logger.exception("Failed to register subname for market %d", market_id)
-                continue
+            else:
+                try:
+                    self._send_tx(
+                        self._registrar.functions.registerMarket(slug, market_id)
+                    )
+                    logger.info("Registered subname: %s.kowalski.eth", slug)
+                except Exception:
+                    logger.exception(
+                        "Failed to register subname for market %d", market_id
+                    )
+                    continue
 
             node = self._registrar.functions.marketNodes(market_id).call()
             pmv2_addr = self._pmv2.address
@@ -299,5 +359,9 @@ class ENSBridge:
         signed = self._eth_w3.eth.account.sign_transaction(tx, self._account.key)
         tx_hash = self._eth_w3.eth.send_raw_transaction(signed.raw_transaction)
         receipt = self._eth_w3.eth.wait_for_transaction_receipt(tx_hash, timeout=60)
+        if receipt["status"] != 1:
+            raise RuntimeError(
+                f"tx reverted: {tx_hash.hex()} (block {receipt['blockNumber']})"
+            )
         logger.info("TX %s confirmed (block %d)", tx_hash.hex(), receipt["blockNumber"])
         return receipt
